@@ -105,7 +105,6 @@ async function handleUpdateWeek(id, fields) {
         });
         const result = await response.json();
         if (result.success) {
-            // تحديث الأسبوع في المتغير العالمي
             const index = weeks.findIndex(w => w.id === id);
             if (index !== -1) {
                 weeks[index] = { id, ...fields };
