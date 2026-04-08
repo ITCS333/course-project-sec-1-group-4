@@ -20,7 +20,7 @@ function createUserRow(user) {
   emailTd.textContent = user.email;
 
   const adminTd = document.createElement("td");
-  adminTd.textContent = user.is_admin == 1 ? "Yes" : "No";
+  adminTd.textContent = user.is_admin === 1 || user.is_admin === "1" ? "Yes" : "No";
 
   const actionsTd = document.createElement("td");
 
@@ -73,7 +73,7 @@ async function handleChangePassword(event) {
 
   const id = 1;
 
-  const response = await fetch("../common/index.php?action=change_password", {
+  const response = await fetch("../api/index.php?action=change_password", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -113,7 +113,7 @@ async function handleAddUser(event) {
     return;
   }
 
-  const response = await fetch("../common/index.php", {
+  const response = await fetch("../api/index.php", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -139,7 +139,7 @@ async function handleTableClick(event) {
   if (event.target.classList.contains("delete-btn")) {
     const id = event.target.dataset.id;
 
-    const response = await fetch("../common/index.php?id=" + id, {
+    const response = await fetch("../api/index.php?id=" + id, {
       method: "DELETE"
     });
 
@@ -155,14 +155,12 @@ async function handleTableClick(event) {
 
   if (event.target.classList.contains("edit-btn")) {
     const id = event.target.dataset.id;
-
     const user = users.find(u => u.id == id);
 
     const newName = prompt("Enter new name:", user.name);
-
     if (!newName) return;
 
-    const response = await fetch("../common/index.php", {
+    const response = await fetch("../api/index.php", {
       method: "PUT",
       headers: {
         "Content-Type": "application/json"
@@ -201,21 +199,19 @@ function handleSearch() {
 
 function handleSort(event) {
   const index = event.currentTarget.cellIndex;
-
   const mapping = ["name", "email", "is_admin"];
   const key = mapping[index];
 
   if (!key) return;
 
   const dir = event.currentTarget.dataset.sortDir === "asc" ? "desc" : "asc";
-
   event.currentTarget.dataset.sortDir = dir;
 
   users.sort((a, b) => {
     let result;
 
     if (key === "is_admin") {
-      result = a[key] - b[key];
+      result = Number(a[key]) - Number(b[key]);
     } else {
       result = a[key].localeCompare(b[key]);
     }
@@ -227,7 +223,7 @@ function handleSort(event) {
 }
 
 async function loadUsersAndInitialize() {
-  const response = await fetch("../common/index.php");
+  const response = await fetch("../api/index.php");
 
   if (!response.ok) {
     alert("Failed to load users.");
@@ -235,9 +231,7 @@ async function loadUsersAndInitialize() {
   }
 
   const result = await response.json();
-
   users = result.data;
-
   renderTable(users);
 
   changePasswordForm.addEventListener("submit", handleChangePassword);
@@ -245,9 +239,10 @@ async function loadUsersAndInitialize() {
   userTableBody.addEventListener("click", handleTableClick);
   searchInput.addEventListener("input", handleSearch);
 
-  tableHeaders.forEach(th =>
-    th.addEventListener("click", handleSort)
-  );
+  tableHeaders.forEach(th => {
+    th.addEventListener("click", handleSort);
+  });
 }
 
+// --- Initial Page Load ---
 loadUsersAndInitialize();
