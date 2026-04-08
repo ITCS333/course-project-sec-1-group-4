@@ -1,6 +1,10 @@
 <?php
 /**
  * Authentication Handler for Login Form
+ * 
+ * This PHP script handles user authentication via POST requests from the Fetch API.
+ * It validates credentials against a MySQL database using PDO,
+ * creates sessions, and returns JSON responses.
  */
 
 // --- Session Management ---
@@ -51,7 +55,7 @@ if (strlen($password) < 8) {
 }
 
 // --- Database Connection ---
-// عدلي هذا السطر حسب اسم ومكان ملف الاتصال الحقيقي عندكم
+// عدلي اسم الملف إذا كان مختلف عندكم
 require_once '../common/db.php';
 
 try {
@@ -92,17 +96,16 @@ try {
 
         echo json_encode($response);
         exit;
+    } else {
+        // --- Handle Failed Authentication ---
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid email or password'
+        ]);
+        exit;
     }
 
-    // --- Handle Failed Authentication ---
-    echo json_encode([
-        'success' => false,
-        'message' => 'Invalid email or password'
-    ]);
-    exit;
-
 } catch (PDOException $e) {
-    // --- Catch PDO exceptions ---
     error_log($e->getMessage());
 
     echo json_encode([
