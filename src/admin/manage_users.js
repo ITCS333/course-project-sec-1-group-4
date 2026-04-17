@@ -1,14 +1,12 @@
-// --- Global Data Store ---
 let users = [];
+let initialized = false;
 
-// --- Element Selections ---
 const userTableBody = document.getElementById("user-table-body");
 const addUserForm = document.getElementById("add-user-form");
 const changePasswordForm = document.getElementById("password-form");
 const searchInput = document.getElementById("search-input");
 const tableHeaders = document.querySelectorAll("#user-table thead th");
 
-// --- Functions ---
 
 function createUserRow(user) {
   const tr = document.createElement("tr");
@@ -20,7 +18,7 @@ function createUserRow(user) {
   emailTd.textContent = user.email;
 
   const adminTd = document.createElement("td");
-  adminTd.textContent = user.is_admin === 1 || user.is_admin === "1" ? "Yes" : "No";
+  adminTd.textContent = Number(user.is_admin) === 1 ? "Yes" : "No";
 
   const actionsTd = document.createElement("td");
 
@@ -49,8 +47,7 @@ function renderTable(userArray) {
   userTableBody.innerHTML = "";
 
   userArray.forEach(user => {
-    const row = createUserRow(user);
-    userTableBody.appendChild(row);
+    userTableBody.appendChild(createUserRow(user));
   });
 }
 
@@ -89,7 +86,9 @@ async function handleChangePassword(event) {
 
   if (result.success) {
     alert("Password updated successfully!");
-    changePasswordForm.reset();
+    document.getElementById("current-password").value = "";
+    document.getElementById("new-password").value = "";
+    document.getElementById("confirm-password").value = "";
   } else {
     alert(result.message);
   }
@@ -98,8 +97,8 @@ async function handleChangePassword(event) {
 async function handleAddUser(event) {
   event.preventDefault();
 
-  const name = document.getElementById("user-name").value;
-  const email = document.getElementById("user-email").value;
+  const name = document.getElementById("user-name").value.trim();
+  const email = document.getElementById("user-email").value.trim();
   const password = document.getElementById("default-password").value;
   const is_admin = document.getElementById("is-admin").value;
 
@@ -127,7 +126,7 @@ async function handleAddUser(event) {
   });
 
   if (response.status === 201) {
-    loadUsersAndInitialize();
+    await loadUsersAndInitialize();
     addUserForm.reset();
   } else {
     const result = await response.json();
@@ -146,7 +145,7 @@ async function handleTableClick(event) {
     const result = await response.json();
 
     if (result.success) {
-      users = users.filter(user => user.id != id);
+      users = users.filter(user => String(user.id) !== String(id));
       renderTable(users);
     } else {
       alert(result.message);
@@ -155,7 +154,7 @@ async function handleTableClick(event) {
 
   if (event.target.classList.contains("edit-btn")) {
     const id = event.target.dataset.id;
-    const user = users.find(u => u.id == id);
+    const user = users.find(u => String(u.id) === String(id));
 
     const newName = prompt("Enter new name:", user.name);
     if (!newName) return;
@@ -174,7 +173,7 @@ async function handleTableClick(event) {
     const result = await response.json();
 
     if (result.success) {
-      loadUsersAndInitialize();
+      await loadUsersAndInitialize();
     } else {
       alert(result.message);
     }
@@ -189,34 +188,39 @@ function handleSearch() {
     return;
   }
 
-  const filtered = users.filter(user =>
+  const filteredUsers = users.filter(user =>
     user.name.toLowerCase().includes(term) ||
     user.email.toLowerCase().includes(term)
   );
 
-  renderTable(filtered);
+  renderTable(filteredUsers);
 }
 
 function handleSort(event) {
   const index = event.currentTarget.cellIndex;
-  const mapping = ["name", "email", "is_admin"];
-  const key = mapping[index];
+  const columnMap = {
+    0: "name",
+    1: "email",
+    2: "is_admin"
+  };
 
+  const key = columnMap[index];
   if (!key) return;
 
-  const dir = event.currentTarget.dataset.sortDir === "asc" ? "desc" : "asc";
-  event.currentTarget.dataset.sortDir = dir;
+  const currentDir = event.currentTarget.dataset.sortDir || "asc";
+  const newDir = currentDir === "asc" ? "desc" : "asc";
+  event.currentTarget.dataset.sortDir = newDir;
 
   users.sort((a, b) => {
-    let result;
+    let comparison = 0;
 
     if (key === "is_admin") {
-      result = Number(a[key]) - Number(b[key]);
+      comparison = Number(a[key]) - Number(b[key]);
     } else {
-      result = a[key].localeCompare(b[key]);
+      comparison = a[key].localeCompare(b[key]);
     }
 
-    return dir === "asc" ? result : -result;
+    return newDir === "asc" ? comparison : -comparison;
   });
 
   renderTable(users);
@@ -234,15 +238,29 @@ async function loadUsersAndInitialize() {
   users = result.data;
   renderTable(users);
 
-  changePasswordForm.addEventListener("submit", handleChangePassword);
-  addUserForm.addEventListener("submit", handleAddUser);
-  userTableBody.addEventListener("click", handleTableClick);
-  searchInput.addEventListener("input", handleSearch);
-
-  tableHeaders.forEach(th => {
-    th.addEventListener("click", handleSort);
-  });
+  if (!initialized) {
+    changePasswordForm.addEventListener("submit", handleChangePassword);
+    addUserForm.addEventListener("submit", handleAddUser);
+    userTableBody.addEventListener("click", handleTableClick);
+    searchInput.addEventListener("input", handleSearch);
+    tableHeaders.forEach(th => th.addEventListener("click", handleSort));
+    initialized = true;
+  }
 }
 
-// --- Initial Page Load ---
-loadUsersAndInitialize();
+if (typeof window !== "undefined") {
+  loadUsersAndInitialize();
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    createUserRow,
+    renderTable,
+    handleChangePassword,
+    handleAddUser,
+    handleTableClick,
+    handleSearch,
+    handleSort,
+    loadUsersAndInitialize
+  };
+}
