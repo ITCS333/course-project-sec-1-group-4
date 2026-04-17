@@ -99,6 +99,10 @@ async function handleChangePassword(event) {
     return;
   }
 
+  currentPasswordInput.value = "";
+  newPasswordInput.value = "";
+  confirmPasswordInput.value = "";
+
   const response = await fetch("../api/index.php?action=change_password", {
     method: "POST",
     headers: {
@@ -115,9 +119,6 @@ async function handleChangePassword(event) {
 
   if (result.success) {
     alert("Password updated successfully!");
-    currentPasswordInput.value = "";
-    newPasswordInput.value = "";
-    confirmPasswordInput.value = "";
   } else {
     alert(result.message);
   }
