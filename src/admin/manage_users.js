@@ -81,9 +81,13 @@ function renderTable(userArray) {
 async function handleChangePassword(event) {
   event.preventDefault();
 
-  const currentPassword = document.getElementById("current-password").value;
-  const newPassword = document.getElementById("new-password").value;
-  const confirmPassword = document.getElementById("confirm-password").value;
+  const currentPasswordInput = document.getElementById("current-password");
+  const newPasswordInput = document.getElementById("new-password");
+  const confirmPasswordInput = document.getElementById("confirm-password");
+
+  const currentPassword = currentPasswordInput.value;
+  const newPassword = newPasswordInput.value;
+  const confirmPassword = confirmPasswordInput.value;
 
   if (newPassword !== confirmPassword) {
     alert("Passwords do not match.");
@@ -111,9 +115,9 @@ async function handleChangePassword(event) {
 
   if (result.success) {
     alert("Password updated successfully!");
-    document.getElementById("current-password").value = "";
-    document.getElementById("new-password").value = "";
-    document.getElementById("confirm-password").value = "";
+    currentPasswordInput.value = "";
+    newPasswordInput.value = "";
+    confirmPasswordInput.value = "";
   } else {
     alert(result.message);
   }
@@ -233,7 +237,7 @@ function handleSort(event) {
 
   if (!key) return;
 
-  const currentDir = event.currentTarget.dataset.sortDir || "asc";
+  const currentDir = event.currentTarget.dataset.sortDir || "none";
   const newDir = currentDir === "asc" ? "desc" : "asc";
   event.currentTarget.dataset.sortDir = newDir;
 
