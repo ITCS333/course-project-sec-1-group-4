@@ -1,19 +1,12 @@
 <?php
 /**
  * Authentication Handler for Login Form
- * 
- * This PHP script handles user authentication via POST requests from the Fetch API.
- * It validates credentials against a MySQL database using PDO,
- * creates sessions, and returns JSON responses.
  */
 
-// --- Session Management ---
 session_start();
 
-// --- Set Response Headers ---
 header('Content-Type: application/json');
 
-// --- Check Request Method ---
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode([
         'success' => false,
@@ -22,7 +15,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-// --- Get POST Data ---
 $rawData = file_get_contents('php://input');
 $data = json_decode($rawData, true);
 
@@ -37,7 +29,6 @@ if (!isset($data['email']) || !isset($data['password'])) {
 $email = trim($data['email']);
 $password = $data['password'];
 
-// --- Server-Side Validation ---
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     echo json_encode([
         'success' => false,
@@ -54,36 +45,31 @@ if (strlen($password) < 8) {
     exit;
 }
 
-// --- Database Connection ---
-// عدلي اسم الملف إذا كان مختلف عندكم
+/*
+ عدلي هذا السطر فقط إذا اسم/مكان ملف الاتصال مختلف عندكم
+*/
 require_once '../common/db.php';
 
 try {
     $db = getDBConnection();
 
-    // --- Prepare SQL Query ---
-    $sql = "SELECT id, name, email, password, is_admin FROM users WHERE email = :email";
+    $sql = "SELECT id, name, email, password, is_admin
+            FROM users
+            WHERE email = :email";
 
-    // --- Prepare the Statement ---
     $stmt = $db->prepare($sql);
-
-    // --- Execute the Query ---
     $stmt->execute(['email' => $email]);
 
-    // --- Fetch User Data ---
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // --- Verify User Exists and Password Matches ---
     if ($user && password_verify($password, $user['password'])) {
-
-        // --- Handle Successful Authentication ---
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['user_name'] = $user['name'];
         $_SESSION['user_email'] = $user['email'];
         $_SESSION['is_admin'] = $user['is_admin'];
         $_SESSION['logged_in'] = true;
 
-        $response = [
+        echo json_encode([
             'success' => true,
             'message' => 'Login successful',
             'user' => [
@@ -92,18 +78,15 @@ try {
                 'email' => $user['email'],
                 'is_admin' => $user['is_admin']
             ]
-        ];
-
-        echo json_encode($response);
-        exit;
-    } else {
-        // --- Handle Failed Authentication ---
-        echo json_encode([
-            'success' => false,
-            'message' => 'Invalid email or password'
         ]);
         exit;
     }
+
+    echo json_encode([
+        'success' => false,
+        'message' => 'Invalid email or password'
+    ]);
+    exit;
 
 } catch (PDOException $e) {
     error_log($e->getMessage());
