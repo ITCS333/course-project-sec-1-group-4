@@ -1,14 +1,35 @@
-// --- Global Data Store ---
 let users = [];
+let listenersAttached = false;
 
-// --- Element Selections ---
-const userTableBody = document.getElementById("user-table-body");
-const addUserForm = document.getElementById("add-user-form");
-const changePasswordForm = document.getElementById("password-form");
-const searchInput = document.getElementById("search-input");
-const tableHeaders = document.querySelectorAll("#user-table thead th");
+function getUserTableBody() {
+  return typeof document !== "undefined"
+    ? document.getElementById("user-table-body")
+    : null;
+}
 
-// --- Functions ---
+function getAddUserForm() {
+  return typeof document !== "undefined"
+    ? document.getElementById("add-user-form")
+    : null;
+}
+
+function getChangePasswordForm() {
+  return typeof document !== "undefined"
+    ? document.getElementById("password-form")
+    : null;
+}
+
+function getSearchInput() {
+  return typeof document !== "undefined"
+    ? document.getElementById("search-input")
+    : null;
+}
+
+function getTableHeaders() {
+  return typeof document !== "undefined"
+    ? document.querySelectorAll("#user-table thead th")
+    : [];
+}
 
 function createUserRow(user) {
   const tr = document.createElement("tr");
@@ -46,9 +67,12 @@ function createUserRow(user) {
 }
 
 function renderTable(userArray) {
+  const userTableBody = getUserTableBody();
+  if (!userTableBody) return;
+
   userTableBody.innerHTML = "";
 
-  userArray.forEach(user => {
+  userArray.forEach((user) => {
     const row = createUserRow(user);
     userTableBody.appendChild(row);
   });
@@ -71,15 +95,13 @@ async function handleChangePassword(event) {
     return;
   }
 
-  const id = 1;
-
   const response = await fetch("../api/index.php?action=change_password", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      id,
+      id: 1,
       current_password: currentPassword,
       new_password: newPassword
     })
@@ -130,7 +152,8 @@ async function handleAddUser(event) {
 
   if (response.status === 201) {
     await loadUsersAndInitialize();
-    addUserForm.reset();
+    const addUserForm = getAddUserForm();
+    if (addUserForm) addUserForm.reset();
   } else {
     const result = await response.json();
     alert(result.message);
@@ -148,7 +171,7 @@ async function handleTableClick(event) {
     const result = await response.json();
 
     if (result.success) {
-      users = users.filter(user => user.id != id);
+      users = users.filter((user) => user.id != id);
       renderTable(users);
     } else {
       alert(result.message);
@@ -157,10 +180,9 @@ async function handleTableClick(event) {
 
   if (event.target.classList.contains("edit-btn")) {
     const id = event.target.dataset.id;
+    const user = users.find((u) => u.id == id);
 
-    const user = users.find(u => u.id == id);
     const newName = prompt("Enter new name:", user.name);
-
     if (!newName) return;
 
     const response = await fetch("../api/index.php", {
@@ -184,7 +206,10 @@ async function handleTableClick(event) {
   }
 }
 
-function handleSearch(event) {
+function handleSearch() {
+  const searchInput = getSearchInput();
+  if (!searchInput) return;
+
   const term = searchInput.value.toLowerCase();
 
   if (!term) {
@@ -192,9 +217,10 @@ function handleSearch(event) {
     return;
   }
 
-  const filtered = users.filter(user =>
-    user.name.toLowerCase().includes(term) ||
-    user.email.toLowerCase().includes(term)
+  const filtered = users.filter(
+    (user) =>
+      user.name.toLowerCase().includes(term) ||
+      user.email.toLowerCase().includes(term)
   );
 
   renderTable(filtered);
@@ -202,7 +228,6 @@ function handleSearch(event) {
 
 function handleSort(event) {
   const index = event.currentTarget.cellIndex;
-
   const mapping = ["name", "email", "is_admin"];
   const key = mapping[index];
 
@@ -227,8 +252,6 @@ function handleSort(event) {
   renderTable(users);
 }
 
-let listenersAttached = false;
-
 async function loadUsersAndInitialize() {
   const response = await fetch("../api/index.php");
 
@@ -242,21 +265,40 @@ async function loadUsersAndInitialize() {
   renderTable(users);
 
   if (!listenersAttached) {
-    changePasswordForm.addEventListener("submit", handleChangePassword);
-    addUserForm.addEventListener("submit", handleAddUser);
-    userTableBody.addEventListener("click", handleTableClick);
-    searchInput.addEventListener("input", handleSearch);
-    tableHeaders.forEach(th => th.addEventListener("click", handleSort));
+    const changePasswordForm = getChangePasswordForm();
+    const addUserForm = getAddUserForm();
+    const userTableBody = getUserTableBody();
+    const searchInput = getSearchInput();
+    const tableHeaders = getTableHeaders();
+
+    if (changePasswordForm) {
+      changePasswordForm.addEventListener("submit", handleChangePassword);
+    }
+
+    if (addUserForm) {
+      addUserForm.addEventListener("submit", handleAddUser);
+    }
+
+    if (userTableBody) {
+      userTableBody.addEventListener("click", handleTableClick);
+    }
+
+    if (searchInput) {
+      searchInput.addEventListener("input", handleSearch);
+    }
+
+    tableHeaders.forEach((th) => {
+      th.addEventListener("click", handleSort);
+    });
+
     listenersAttached = true;
   }
 }
 
-// --- Initial Page Load ---
-if (typeof window !== "undefined") {
+if (typeof window !== "undefined" && typeof document !== "undefined") {
   loadUsersAndInitialize();
 }
 
-// --- Exports for testing ---
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     createUserRow,
