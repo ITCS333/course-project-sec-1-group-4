@@ -1,8 +1,4 @@
 <?php
-/**
- * Authentication Handler for Login Form
- */
-
 session_start();
 
 header('Content-Type: application/json');
@@ -45,24 +41,19 @@ if (strlen($password) < 8) {
     exit;
 }
 
-/*
- عدلي هذا السطر فقط إذا اسم/مكان ملف الاتصال مختلف عندكم
-*/
-require_once '../common/db.php';
-
 try {
     $db = getDBConnection();
 
-    $sql = "SELECT id, name, email, password, is_admin
-            FROM users
-            WHERE email = :email";
+    $stmt = $db->prepare("
+        SELECT id, name, email, password, is_admin
+        FROM users
+        WHERE email = :email
+    ");
 
-    $stmt = $db->prepare($sql);
     $stmt->execute(['email' => $email]);
-
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($user && password_verify($password, $user['password'])) {
+    if ($user && $user['password'] === $password) {
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['user_name'] = $user['name'];
         $_SESSION['user_email'] = $user['email'];
