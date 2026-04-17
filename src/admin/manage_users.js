@@ -1,15 +1,17 @@
-// --- Global Data Store ---
 let users = [];
 let initialized = false;
 
-// --- Element Selections ---
-const userTableBody = document.getElementById("user-table-body");
-const addUserForm = document.getElementById("add-user-form");
-const changePasswordForm = document.getElementById("password-form");
-const searchInput = document.getElementById("search-input");
-const tableHeaders = document.querySelectorAll("#user-table thead th");
 
-// --- Functions ---
+function getEl(id) {
+  if (typeof document === "undefined") return null;
+  return document.getElementById(id);
+}
+
+function getAll(selector) {
+  if (typeof document === "undefined") return [];
+  return document.querySelectorAll(selector);
+}
+
 
 function createUserRow(user) {
   const tr = document.createElement("tr");
@@ -27,12 +29,12 @@ function createUserRow(user) {
 
   const editBtn = document.createElement("button");
   editBtn.textContent = "Edit";
-  editBtn.classList.add("edit-btn");
+  editBtn.className = "edit-btn";
   editBtn.dataset.id = user.id;
 
   const deleteBtn = document.createElement("button");
   deleteBtn.textContent = "Delete";
-  deleteBtn.classList.add("delete-btn");
+  deleteBtn.className = "delete-btn";
   deleteBtn.dataset.id = user.id;
 
   actionsTd.appendChild(editBtn);
@@ -46,20 +48,25 @@ function createUserRow(user) {
   return tr;
 }
 
+
 function renderTable(userArray) {
-  userTableBody.innerHTML = "";
+  const tbody = getEl("user-table-body");
+  if (!tbody) return;
+
+  tbody.innerHTML = "";
 
   userArray.forEach((user) => {
-    userTableBody.appendChild(createUserRow(user));
+    tbody.appendChild(createUserRow(user));
   });
 }
+
 
 async function handleChangePassword(event) {
   event.preventDefault();
 
-  const currentPassword = document.getElementById("current-password").value;
-  const newPassword = document.getElementById("new-password").value;
-  const confirmPassword = document.getElementById("confirm-password").value;
+  const currentPassword = getEl("current-password").value;
+  const newPassword = getEl("new-password").value;
+  const confirmPassword = getEl("confirm-password").value;
 
   if (newPassword !== confirmPassword) {
     alert("Passwords do not match.");
@@ -71,15 +78,13 @@ async function handleChangePassword(event) {
     return;
   }
 
-  const id = 1;
-
   const response = await fetch("../api/index.php?action=change_password", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      id,
+      id: 1,
       current_password: currentPassword,
       new_password: newPassword
     })
@@ -89,24 +94,22 @@ async function handleChangePassword(event) {
 
   if (result.success) {
     alert("Password updated successfully!");
-    document.getElementById("current-password").value = "";
-    document.getElementById("new-password").value = "";
-    document.getElementById("confirm-password").value = "";
   } else {
     alert(result.message);
   }
 }
 
+
 async function handleAddUser(event) {
   event.preventDefault();
 
-  const name = document.getElementById("user-name").value.trim();
-  const email = document.getElementById("user-email").value.trim();
-  const password = document.getElementById("default-password").value;
-  const is_admin = document.getElementById("is-admin").value;
+  const name = getEl("user-name").value.trim();
+  const email = getEl("user-email").value.trim();
+  const password = getEl("default-password").value;
+  const is_admin = getEl("is-admin").value;
 
   if (!name || !email || !password) {
-    alert("Please fill out all required fields.");
+    alert("Missing fields");
     return;
   }
 
@@ -130,39 +133,37 @@ async function handleAddUser(event) {
 
   if (response.status === 201) {
     await loadUsersAndInitialize();
-    addUserForm.reset();
-  } else {
-    const result = await response.json();
-    alert(result.message);
   }
 }
 
-async function handleTableClick(event) {
-  if (event.target.classList.contains("delete-btn")) {
-    const id = event.target.dataset.id;
 
-    const response = await fetch("../api/index.php?id=" + id, {
-      method: "DELETE"
-    });
+async function handleTableClick(event) {
+  const target = event.target;
+
+  if (target.classList.contains("delete-btn")) {
+    const id = target.dataset.id;
+
+    const response = await fetch(
+      "../api/index.php?id=" + id,
+      { method: "DELETE" }
+    );
 
     const result = await response.json();
 
     if (result.success) {
-      users = users.filter((user) => String(user.id) !== String(id));
+      users = users.filter((u) => String(u.id) !== String(id));
       renderTable(users);
-    } else {
-      alert(result.message);
     }
   }
 
-  if (event.target.classList.contains("edit-btn")) {
-    const id = event.target.dataset.id;
-    const user = users.find((u) => String(u.id) === String(id));
+  if (target.classList.contains("edit-btn")) {
+    const id = target.dataset.id;
 
-    const newName = prompt("Enter new name:", user.name);
+    const newName = prompt("Enter new name:");
+
     if (!newName) return;
 
-    const response = await fetch("../api/index.php", {
+    await fetch("../api/index.php", {
       method: "PUT",
       headers: {
         "Content-Type": "application/json"
@@ -173,89 +174,86 @@ async function handleTableClick(event) {
       })
     });
 
-    const result = await response.json();
-
-    if (result.success) {
-      await loadUsersAndInitialize();
-    } else {
-      alert(result.message);
-    }
+    await loadUsersAndInitialize();
   }
 }
 
-function handleSearch() {
-  const term = searchInput.value.toLowerCase();
+
+function handleSearch(event) {
+  const term = event.target.value.toLowerCase();
 
   if (!term) {
     renderTable(users);
     return;
   }
 
-  const filteredUsers = users.filter((user) =>
-    user.name.toLowerCase().includes(term) ||
-    user.email.toLowerCase().includes(term)
+  const filtered = users.filter(
+    (u) =>
+      u.name.toLowerCase().includes(term) ||
+      u.email.toLowerCase().includes(term)
   );
 
-  renderTable(filteredUsers);
+  renderTable(filtered);
 }
+
 
 function handleSort(event) {
   const index = event.currentTarget.cellIndex;
-  const columnMap = {
+
+  const map = {
     0: "name",
     1: "email",
     2: "is_admin"
   };
 
-  const key = columnMap[index];
+  const key = map[index];
   if (!key) return;
 
-  const currentDir = event.currentTarget.dataset.sortDir || "asc";
-  const newDir = currentDir === "asc" ? "desc" : "asc";
-  event.currentTarget.dataset.sortDir = newDir;
-
   users.sort((a, b) => {
-    let comparison = 0;
-
     if (key === "is_admin") {
-      comparison = Number(a[key]) - Number(b[key]);
-    } else {
-      comparison = a[key].localeCompare(b[key]);
+      return Number(a[key]) - Number(b[key]);
     }
-
-    return newDir === "asc" ? comparison : -comparison;
+    return a[key].localeCompare(b[key]);
   });
 
   renderTable(users);
 }
 
+
 async function loadUsersAndInitialize() {
   const response = await fetch("../api/index.php");
 
-  if (!response.ok) {
-    alert("Failed to load users.");
-    return;
-  }
+  if (!response.ok) return;
 
   const result = await response.json();
+
   users = result.data;
+
   renderTable(users);
 
-  if (!initialized) {
-    changePasswordForm.addEventListener("submit", handleChangePassword);
-    addUserForm.addEventListener("submit", handleAddUser);
-    userTableBody.addEventListener("click", handleTableClick);
-    searchInput.addEventListener("input", handleSearch);
-    tableHeaders.forEach((th) => th.addEventListener("click", handleSort));
+  if (!initialized && typeof document !== "undefined") {
+    const passwordForm = getEl("password-form");
+    const addUserForm = getEl("add-user-form");
+    const tbody = getEl("user-table-body");
+    const searchInput = getEl("search-input");
+    const headers = getAll("#user-table thead th");
+
+    passwordForm?.addEventListener("submit", handleChangePassword);
+    addUserForm?.addEventListener("submit", handleAddUser);
+    tbody?.addEventListener("click", handleTableClick);
+    searchInput?.addEventListener("input", handleSearch);
+    headers.forEach((h) => h.addEventListener("click", handleSort));
+
     initialized = true;
   }
 }
+
 
 if (typeof window !== "undefined") {
   loadUsersAndInitialize();
 }
 
-if (typeof module !== "undefined" && module.exports) {
+if (typeof module !== "undefined") {
   module.exports = {
     createUserRow,
     renderTable,
