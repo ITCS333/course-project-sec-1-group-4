@@ -1,12 +1,15 @@
+// --- Global Data Store ---
 let users = [];
 let initialized = false;
 
+// --- Element Selections ---
 const userTableBody = document.getElementById("user-table-body");
 const addUserForm = document.getElementById("add-user-form");
 const changePasswordForm = document.getElementById("password-form");
 const searchInput = document.getElementById("search-input");
 const tableHeaders = document.querySelectorAll("#user-table thead th");
 
+// --- Functions ---
 
 function createUserRow(user) {
   const tr = document.createElement("tr");
@@ -46,7 +49,7 @@ function createUserRow(user) {
 function renderTable(userArray) {
   userTableBody.innerHTML = "";
 
-  userArray.forEach(user => {
+  userArray.forEach((user) => {
     userTableBody.appendChild(createUserRow(user));
   });
 }
@@ -145,7 +148,7 @@ async function handleTableClick(event) {
     const result = await response.json();
 
     if (result.success) {
-      users = users.filter(user => String(user.id) !== String(id));
+      users = users.filter((user) => String(user.id) !== String(id));
       renderTable(users);
     } else {
       alert(result.message);
@@ -154,7 +157,7 @@ async function handleTableClick(event) {
 
   if (event.target.classList.contains("edit-btn")) {
     const id = event.target.dataset.id;
-    const user = users.find(u => String(u.id) === String(id));
+    const user = users.find((u) => String(u.id) === String(id));
 
     const newName = prompt("Enter new name:", user.name);
     if (!newName) return;
@@ -188,7 +191,7 @@ function handleSearch() {
     return;
   }
 
-  const filteredUsers = users.filter(user =>
+  const filteredUsers = users.filter((user) =>
     user.name.toLowerCase().includes(term) ||
     user.email.toLowerCase().includes(term)
   );
@@ -243,7 +246,7 @@ async function loadUsersAndInitialize() {
     addUserForm.addEventListener("submit", handleAddUser);
     userTableBody.addEventListener("click", handleTableClick);
     searchInput.addEventListener("input", handleSearch);
-    tableHeaders.forEach(th => th.addEventListener("click", handleSort));
+    tableHeaders.forEach((th) => th.addEventListener("click", handleSort));
     initialized = true;
   }
 }
