@@ -192,6 +192,13 @@ function deleteWeek($db, $id)
         sendResponse(["success" => false, "message" => "Invalid ID"], 400);
     }
 
+    $check = $db->prepare("SELECT id FROM weeks WHERE id=?");
+    $check->execute([$id]);
+
+    if (!$check->fetch()) {
+        sendResponse(["success" => false, "message" => "Not found"], 404);
+    }
+
     $stmt = $db->prepare("DELETE FROM weeks WHERE id=?");
     $stmt->execute([$id]);
 
@@ -237,7 +244,16 @@ function createComment($db, $data)
 
 function deleteComment($db, $commentId)
 {
-    if (!$commentId) sendResponse(["success" => false], 400);
+    if (!$commentId || !is_numeric($commentId)) {
+        sendResponse(["success" => false], 400);
+    }
+
+    $check = $db->prepare("SELECT id FROM comments_week WHERE id=?");
+    $check->execute([$commentId]);
+
+    if (!$check->fetch()) {
+        sendResponse(["success" => false, "message" => "Not found"], 404);
+    }
 
     $stmt = $db->prepare("DELETE FROM comments_week WHERE id=?");
     $stmt->execute([$commentId]);
