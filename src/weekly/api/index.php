@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // ================= DB CONNECTION =================
-// عدّلي المسار حسب مشروعك
+
 require_once __DIR__ . '/../../common/db.php';
 $db = getDBConnection();
 
