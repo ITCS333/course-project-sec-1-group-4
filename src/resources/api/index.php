@@ -84,9 +84,9 @@ try {
 
                     resource_id,
 
-                    COALESCE(author, CONCAT('User ', user_id)) AS author,
+                    author,
 
-                    COALESCE(text, comment) AS text,
+                    text,
 
                     created_at
 
