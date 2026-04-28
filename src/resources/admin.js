@@ -1,166 +1,189 @@
+var resources = [];
+
 document.addEventListener("DOMContentLoaded", function () {
-    loadAdminResources();
 
-    const form = document.getElementById("resource-form");
-    const cancelButton = document.getElementById("cancel-edit-btn");
+    loadAndInitialize();
 
-    if (form) {
-        form.addEventListener("submit", function (event) {
-            event.preventDefault();
-            saveResource();
-        });
-    }
-
-    if (cancelButton) {
-        cancelButton.addEventListener("click", function () {
-            resetForm();
-        });
-    }
 });
 
-async function loadAdminResources() {
-    const container = document.getElementById("admin-resources-container");
+function createResourceRow(resource) {
 
-    if (!container) {
-        return;
-    }
+    const row = document.createElement("tr");
 
-    try {
-        const response = await fetch("api/index.php?action=list");
-        const data = await response.json();
+    row.innerHTML = `
 
-        if (!data.success || data.resources.length === 0) {
-            container.innerHTML = "<p>No resources found.</p>";
-            return;
-        }
+        <td>${resource.title}</td>
 
-        container.innerHTML = "";
+        <td>${resource.description}</td>
 
-        data.resources.forEach(function (resource) {
-            const div = document.createElement("div");
+        <td><a href="${resource.link}" target="_blank">${resource.link}</a></td>
 
-            div.innerHTML = `
-                <h3>${resource.title}</h3>
-                <p>${resource.description}</p>
-                <a href="${resource.link}" target="_blank">Open Resource</a>
-                <br>
-                <button onclick="editResource(${resource.id})">Edit</button>
-                <button onclick="deleteResource(${resource.id})">Delete</button>
-                <hr>
-            `;
+        <td>
 
-            div.dataset.title = resource.title;
-            div.dataset.description = resource.description;
-            div.dataset.link = resource.link;
-            div.dataset.id = resource.id;
+            <button type="button" class="edit-btn" data-id="${resource.id}">Edit</button>
 
-            container.appendChild(div);
-        });
+            <button type="button" class="delete-btn" data-id="${resource.id}">Delete</button>
 
-    } catch (error) {
-        container.innerHTML = "<p>Error loading resources.</p>";
-    }
+        </td>
+
+    `;
+
+    return row;
 
 }
 
-function editResource(id) {
-    const cards = document.querySelectorAll("#admin-resources-container div");
-    let selectedCard = null;
+function renderTable(resourceList) {
 
-    cards.forEach(function (card) {
-        if (card.dataset.id == id) {
-            selectedCard = card;
-        }
+    const tbody = document.getElementById("resources-tbody");
+
+    if (!tbody) {
+
+        return;
+
+    }
+
+    tbody.innerHTML = "";
+
+    resourceList.forEach(function (resource) {
+
+        tbody.appendChild(createResourceRow(resource));
+
     });
 
-    if (!selectedCard) {
-        return;
-    }
-
-    document.getElementById("resource-id").value = id;
-    document.getElementById("resource-title").value = selectedCard.dataset.title;
-    document.getElementById("resource-description").value = selectedCard.dataset.description;
-    document.getElementById("resource-link").value = selectedCard.dataset.link;
-    document.getElementById("form-title").textContent = "Edit Resource";
-
 }
 
-function resetForm() {
-    document.getElementById("resource-id").value = "";
-    document.getElementById("resource-title").value = "";
-    document.getElementById("resource-description").value = "";
-    document.getElementById("resource-link").value = "";
-    document.getElementById("form-title").textContent = "Add Resource";
-}
+function handleAddResource(event) {
 
-async function saveResource() {
-    const id = document.getElementById("resource-id").value;
+    event.preventDefault();
+
     const title = document.getElementById("resource-title").value.trim();
+
     const description = document.getElementById("resource-description").value.trim();
+
     const link = document.getElementById("resource-link").value.trim();
 
     if (title === "" || description === "" || link === "") {
-        alert("Please fill in all fields.");
+
         return;
+
     }
 
-    const url = id ? "api/index.php?action=update" : "api/index.php?action=create";
+    fetch("./api/index.php?action=create", {
 
-    try {
-        const response = await fetch(url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                id: id,
-                title: title,
-                description: description,
-                link: link
-            })
-        });
+        method: "POST",
 
-        const data = await response.json();
+        headers: {
 
-        if (data.success) {
-            resetForm();
-            loadAdminResources();
-        } else {
-            alert(data.message || "Could not save resource.");
+            "Content-Type": "application/json"
+
+        },
+
+        body: JSON.stringify({
+
+            title: title,
+
+            description: description,
+
+            link: link
+
+        })
+
+    })
+
+    .then(function (response) {
+
+        return response.json();
+
+    })
+
+    .then(function (result) {
+
+        if (result.data) {
+
+            resources.push(result.data);
+
+            renderTable(resources);
+
         }
 
-    } catch (error) {
-        alert("Error saving resource.");
-    }
+    });
+
 }
 
-async function deleteResource(id) {
-    const confirmed = confirm("Are you sure you want to delete this resource?");
+function handleTableClick(event) {
 
-    if (!confirmed) {
-        return;
-    }
+    const target = event.target;
 
-    try {
-        const response = await fetch("api/index.php?action=delete", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                id: id
-            })
+    if (target.classList.contains("delete-btn")) {
+
+        const id = target.dataset.id;
+
+        fetch("./api/index.php?action=delete&id=" + encodeURIComponent(id), {
+
+            method: "DELETE"
+
         });
 
-        const data = await response.json();
+        return;
 
-        if (data.success) {
-            loadAdminResources();
-        } else {
-            alert(data.message || "Could not delete resource.");
+    }
+
+    if (target.classList.contains("edit-btn")) {
+
+        const id = target.dataset.id;
+
+        const selected = resources.find(function (resource) {
+
+            return String(resource.id) === String(id);
+
+        });
+
+        if (!selected) {
+
+            return;
+
         }
 
-    } catch (error) {
-        alert("Error deleting resource.");
+        document.getElementById("resource-title").value = selected.title;
+
+        document.getElementById("resource-description").value = selected.description;
+
+        document.getElementById("resource-link").value = selected.link;
+
     }
+
+}
+
+async function loadAndInitialize() {
+
+    const response = await fetch("./api/index.php");
+
+    const result = await response.json();
+
+    resources = result.data || result.resources || [];
+
+    renderTable(resources);
+
+    if (!loadAndInitialize._listenersAttached) {
+
+        const form = document.getElementById("resource-form");
+
+        const tbody = document.getElementById("resources-tbody");
+
+        if (form) {
+
+            form.addEventListener("submit", handleAddResource);
+
+        }
+
+        if (tbody) {
+
+            tbody.addEventListener("click", handleTableClick);
+
+        }
+
+        loadAndInitialize._listenersAttached = true;
+
+    }
+
 }

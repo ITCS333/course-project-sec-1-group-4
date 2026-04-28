@@ -1,112 +1,167 @@
+var currentComments = [];
+
 document.addEventListener("DOMContentLoaded", function () {
-    loadResourceDetails();
 
     const form = document.getElementById("comment-form");
 
     if (form) {
-        form.addEventListener("submit", function (event) {
-            event.preventDefault();
-            addComment();
-        });
+
+        form.addEventListener("submit", handleAddComment);
+
     }
+
+    initializePage();
+
 });
 
-function getResourceId() {
+function getResourceIdFromURL() {
+
     const params = new URLSearchParams(window.location.search);
+
     return params.get("id");
+
 }
 
-async function loadResourceDetails() {
-    const resourceId = getResourceId();
-    const detailsContainer = document.getElementById("resource-details");
-    const commentsContainer = document.getElementById("comments-container");
+function renderResourceDetails(resource) {
 
-    if (!resourceId || !detailsContainer) {
-        return;
-    }
+    document.getElementById("resource-title").textContent = resource.title;
 
-    try {
-        const response = await fetch("api/index.php?action=details&id=" + encodeURIComponent(resourceId));
-        const data = await response.json();
+    document.getElementById("resource-description").textContent = resource.description;
 
-        if (!data.success) {
-            detailsContainer.innerHTML = "<p>Resource not found.</p>";
-            return;
+    document.getElementById("resource-link").setAttribute("href", resource.link);
 
-        }
-
-        const resource = data.resource;
-
-        document.getElementById("resource-title").textContent = resource.title;
-
-        detailsContainer.innerHTML = `
-            <h2>${resource.title}</h2>
-            <p>${resource.description}</p>
-            <a href="${resource.link}" target="_blank">Open Resource</a>
-        `;
-
-        commentsContainer.innerHTML = "";
-
-        if (!data.comments || data.comments.length === 0) {
-            commentsContainer.innerHTML = "<p>No comments yet.</p>";
-            return;
-        }
-
-        data.comments.forEach(function (comment) {
-            const div = document.createElement("div");
-
-            div.innerHTML = `
-                <p>${comment.comment}</p>
-                <small>User ID: ${comment.user_id}</small>
-                <hr>
-            `;
-
-            commentsContainer.appendChild(div);
-        });
-
-    } catch (error) {
-        detailsContainer.innerHTML = "<p>Error loading resource details.</p>";
-    }
 }
 
-async function addComment() {
-    const resourceId = getResourceId();
-    const commentInput = document.getElementById("comment-input");
+function createCommentArticle(comment) {
 
-    if (!resourceId || !commentInput) {
+    const article = document.createElement("article");
+
+    const p = document.createElement("p");
+
+    p.textContent = comment.text || comment.comment || "";
+
+    const footer = document.createElement("footer");
+
+    footer.textContent = comment.author || ("User " + (comment.user_id || ""));
+
+    article.appendChild(p);
+
+    article.appendChild(footer);
+
+    return article;
+
+}
+
+function renderComments() {
+
+    const list = document.getElementById("comment-list");
+
+    if (!list) {
+
         return;
 
     }
 
-    const comment = commentInput.value.trim();
+    list.innerHTML = "";
 
-    if (comment === "") {
-        alert("Please write a comment.");
+    currentComments.forEach(function (comment) {
+
+        list.appendChild(createCommentArticle(comment));
+
+    });
+
+}
+
+function handleAddComment(event) {
+
+    event.preventDefault();
+
+    const textarea = document.getElementById("new-comment");
+
+    const text = textarea.value.trim();
+
+    if (text === "") {
+
         return;
+
     }
 
-    try {
-        const response = await fetch("api/index.php?action=comment", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                resource_id: resourceId,
-                comment: comment
-            })
-        });
+    const resourceId = getResourceIdFromURL();
 
-        const data = await response.json();
+    fetch("./api/index.php?action=comment", {
 
-        if (data.success) {
-            commentInput.value = "";
-            loadResourceDetails();
-        } else {
-            alert(data.message || "Could not add comment.");
+        method: "POST",
+
+        headers: {
+
+            "Content-Type": "application/json"
+
+        },
+
+        body: JSON.stringify({
+
+            resource_id: resourceId,
+
+            text: text,
+
+            comment: text
+
+        })
+
+    })
+
+    .then(function (response) {
+
+        return response.json();
+
+    })
+
+    .then(function (result) {
+
+        textarea.value = "";
+
+        if (result.data) {
+
+            currentComments.push(result.data);
+
+            renderComments();
+
         }
 
-    } catch (error) {
-        alert("Error adding comment.");
+    });
+
+}
+
+async function initializePage() {
+
+    const id = getResourceIdFromURL();
+
+    if (!id) {
+
+        return;
+
     }
+
+    const resourceResponse = await fetch("./api/index.php?id=" + encodeURIComponent(id));
+
+    const resourceResult = await resourceResponse.json();
+
+    if (resourceResult.data) {
+
+        renderResourceDetails(resourceResult.data);
+
+    } else if (resourceResult.resource) {
+
+        renderResourceDetails(resourceResult.resource);
+
+    }
+
+    const commentsResponse = await fetch("./api/index.php?action=comments&resource_id=" + encodeURIComponent(id));
+
+    const commentsResult = await commentsResponse.json();
+
+    currentComments = commentsResult.data || commentsResult.comments || [];
+
+    renderComments();
+
 }

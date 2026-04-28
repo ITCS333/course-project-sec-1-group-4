@@ -1,234 +1,527 @@
 <?php
+
+declare(strict_types=1);
+
 session_start();
 
 header("Content-Type: application/json");
 
 require_once "../../common/db.php";
+
 $pdo = getDBConnection();
+
+$method = $_SERVER["REQUEST_METHOD"];
 
 $action = $_GET["action"] ?? "";
 
-function getInputData() {
-    $data = json_decode(file_get_contents("php://input"), true);
+function send_json(array $data, int $status = 200): void {
 
-    if (!$data) {
-        $data = $_POST;
-    }
+    http_response_code($status);
 
-    return $data;
+    echo json_encode($data);
+
+    exit;
 
 }
 
-function requireAdmin() {
-    if (!isset($_SESSION["is_admin"]) || $_SESSION["is_admin"] != 1) {
-        http_response_code(403);
-        echo json_encode([
-            "success" => false,
-            "message" => "Admin access required"
-        ]);
-        exit;
+function get_json_input(): array {
+
+    $raw = file_get_contents("php://input");
+
+    $data = json_decode($raw, true);
+
+    if (is_array($data)) {
+
+        return $data;
+
     }
+
+    return $_POST;
+
+}
+
+function valid_url(string $url): bool {
+
+    return filter_var($url, FILTER_VALIDATE_URL) !== false;
+
+}
+
+function resource_exists(PDO $pdo, int $id): bool {
+
+    $stmt = $pdo->prepare("SELECT id FROM resources WHERE id = ?");
+
+    $stmt->execute([$id]);
+
+    return (bool) $stmt->fetch(PDO::FETCH_ASSOC);
+
 }
 
 try {
-    if ($action === "list") {
+
+    if ($method === "GET") {
+
+        if ($action === "comments") {
+
+            $resourceId = isset($_GET["resource_id"]) ? (int) $_GET["resource_id"] : 0;
+
+            if ($resourceId <= 0) {
+
+                send_json([
+
+                    "success" => false,
+
+                    "message" => "resource_id is required"
+
+                ], 400);
+
+            }
+
+            $stmt = $pdo->prepare("
+
+                SELECT
+
+                    id,
+
+                    resource_id,
+
+                    COALESCE(author, CONCAT('User ', user_id)) AS author,
+
+                    COALESCE(text, comment) AS text,
+
+                    created_at
+
+                FROM comments_resource
+
+                WHERE resource_id = ?
+
+                ORDER BY id DESC
+
+            ");
+
+            $stmt->execute([$resourceId]);
+
+            send_json([
+
+                "success" => true,
+
+                "data" => $stmt->fetchAll(PDO::FETCH_ASSOC)
+
+            ]);
+
+        }
+
+        if (isset($_GET["id"])) {
+
+            $id = (int) $_GET["id"];
+
+            $stmt = $pdo->prepare("
+
+                SELECT id, title, description, link, created_at
+
+                FROM resources
+
+                WHERE id = ?
+
+            ");
+
+            $stmt->execute([$id]);
+
+            $resource = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$resource) {
+
+                send_json([
+
+                    "success" => false,
+
+                    "message" => "Resource not found"
+
+                ], 404);
+
+            }
+
+            send_json([
+
+                "success" => true,
+
+                "data" => $resource
+
+            ]);
+
+        }
+
+        if (isset($_GET["search"])) {
+
+            $search = "%" . $_GET["search"] . "%";
+
+            $stmt = $pdo->prepare("
+
+                SELECT id, title, description, link, created_at
+
+                FROM resources
+
+                WHERE title LIKE ? OR description LIKE ?
+
+                ORDER BY id DESC
+
+            ");
+
+            $stmt->execute([$search, $search]);
+
+            send_json([
+
+                "success" => true,
+
+                "data" => $stmt->fetchAll(PDO::FETCH_ASSOC)
+
+            ]);
+
+        }
+
         $stmt = $pdo->query("
-            SELECT id, title, description, link
+
+            SELECT id, title, description, link, created_at
+
             FROM resources
+
             ORDER BY id DESC
+
         ");
 
-        $resources = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        send_json([
 
-        echo json_encode([
             "success" => true,
-            "resources" => $resources
+
+            "data" => $stmt->fetchAll(PDO::FETCH_ASSOC)
+
         ]);
 
-        exit;
     }
 
-    if ($action === "details") {
-        $id = $_GET["id"] ?? null;
+    if ($method === "POST") {
 
-        if (!$id) {
-            http_response_code(400);
-            echo json_encode([
-                "success" => false,
-                "message" => "Resource ID is required"
-            ]);
-            exit;
+        $data = get_json_input();
+
+        if ($action === "comment") {
+
+            $resourceId = isset($data["resource_id"]) ? (int) $data["resource_id"] : 0;
+
+            $author = trim($data["author"] ?? "Student");
+
+            $text = trim($data["text"] ?? $data["comment"] ?? "");
+
+            if ($resourceId <= 0 || $text === "") {
+
+                send_json([
+
+                    "success" => false,
+
+                    "message" => "resource_id and text are required"
+
+                ], 400);
+
+            }
+
+            if (!resource_exists($pdo, $resourceId)) {
+
+                send_json([
+
+                    "success" => false,
+
+                    "message" => "Resource not found"
+
+                ], 404);
+
+            }
+
+            $stmt = $pdo->prepare("
+
+                INSERT INTO comments_resource (resource_id, author, text)
+
+                VALUES (?, ?, ?)
+
+            ");
+
+            $stmt->execute([$resourceId, $author, $text]);
+
+            $id = (int) $pdo->lastInsertId();
+
+            send_json([
+
+                "success" => true,
+
+                "id" => $id,
+
+                "data" => [
+
+                    "id" => $id,
+
+                    "resource_id" => $resourceId,
+
+                    "author" => $author,
+
+                    "text" => $text,
+
+                    "created_at" => ""
+
+                ]
+
+            ], 201);
+
         }
-
-        $stmt = $pdo->prepare("
-            SELECT id, title, description, link
-            FROM resources
-            WHERE id = ?
-        ");
-        $stmt->execute([$id]);
-        $resource = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$resource) {
-            http_response_code(404);
-            echo json_encode([
-                "success" => false,
-                "message" => "Resource not found"
-            ]);
-            exit;
-        }
-
-        $commentsStmt = $pdo->prepare("
-            SELECT id, resource_id, user_id, comment
-            FROM comments_resource
-            WHERE resource_id = ?
-            ORDER BY id DESC
-        ");
-        $commentsStmt->execute([$id]);
-        $comments = $commentsStmt->fetchAll(PDO::FETCH_ASSOC);
-
-        echo json_encode([
-            "success" => true,
-            "resource" => $resource,
-            "comments" => $comments
-        ]);
-        exit;
-    }
-
-    if ($action === "comment") {
-        $data = getInputData();
-
-        $resource_id = $data["resource_id"] ?? null;
-        $comment = trim($data["comment"] ?? "");
-
-        if (!$resource_id || $comment === "") {
-            http_response_code(400);
-            echo json_encode([
-                "success" => false,
-                "message" => "Resource ID and comment are required"
-            ]);
-            exit;
-        }
-
-        $user_id = $_SESSION["user_id"] ?? 1;
-        $stmt = $pdo->prepare("
-            INSERT INTO comments_resource (resource_id, user_id, comment)
-            VALUES (?, ?, ?)
-        ");
-        $stmt->execute([$resource_id, $user_id, $comment]);
-
-        http_response_code(201);
-        echo json_encode([
-            "success" => true,
-            "message" => "Comment added successfully"
-        ]);
-        exit;
-    }
-
-    if ($action === "create") {
-        requireAdmin();
-
-        $data = getInputData();
 
         $title = trim($data["title"] ?? "");
+
         $description = trim($data["description"] ?? "");
+
         $link = trim($data["link"] ?? "");
 
-        if ($title === "" || $description === "" || $link === "") {
-            http_response_code(400);
-            echo json_encode([
+        if ($title === "" || $link === "" || !valid_url($link)) {
+
+            send_json([
+
                 "success" => false,
-                "message" => "Title, description, and link are required"
-            ]);
-            exit;
+
+                "message" => "Valid title and link are required"
+
+            ], 400);
+
         }
 
         $stmt = $pdo->prepare("
+
             INSERT INTO resources (title, description, link)
+
             VALUES (?, ?, ?)
+
         ");
+
         $stmt->execute([$title, $description, $link]);
-        http_response_code(201);
-        echo json_encode([
+
+        $id = (int) $pdo->lastInsertId();
+
+        send_json([
+
             "success" => true,
-            "message" => "Resource created successfully",
-            "id" => $pdo->lastInsertId()
-        ]);
-        exit;
+
+            "id" => $id,
+
+            "data" => [
+
+                "id" => $id,
+
+                "title" => $title,
+
+                "description" => $description,
+
+                "link" => $link,
+
+                "created_at" => ""
+
+            ]
+
+        ], 201);
+
     }
 
-    if ($action === "update") {
-        requireAdmin();
+    if ($method === "PUT") {
 
-        $data = getInputData();
+        $data = get_json_input();
 
-        $id = $data["id"] ?? null;
-        $title = trim($data["title"] ?? "");
-        $description = trim($data["description"] ?? "");
-        $link = trim($data["link"] ?? "");
+        $id = isset($data["id"]) ? (int) $data["id"] : 0;
 
-        if (!$id || $title === "" || $description === "" || $link === "") {
-            http_response_code(400);
-            echo json_encode([
+        if ($id <= 0) {
+
+            send_json([
+
                 "success" => false,
-                "message" => "ID, title, description, and link are required"
-            ]);
-            exit;
+
+                "message" => "id is required"
+
+            ], 400);
+
         }
 
-        $stmt = $pdo->prepare("
-            UPDATE resources
-            SET title = ?, description = ?, link = ?
-            WHERE id = ?
-        ");
-        $stmt->execute([$title, $description, $link, $id]);
+        if (!resource_exists($pdo, $id)) {
 
-        echo json_encode([
-            "success" => true,
-            "message" => "Resource updated successfully"
+            send_json([
+
+                "success" => false,
+
+                "message" => "Resource not found"
+
+            ], 404);
+
+        }
+
+        if (isset($data["link"]) && !valid_url(trim($data["link"]))) {
+
+            send_json([
+
+                "success" => false,
+
+                "message" => "Invalid link"
+
+            ], 400);
+
+        }
+
+        $fields = [];
+
+        $values = [];
+
+        foreach (["title", "description", "link"] as $field) {
+
+            if (array_key_exists($field, $data)) {
+
+                $fields[] = "$field = ?";
+
+                $values[] = trim((string) $data[$field]);
+
+            }
+
+        }
+
+        if (empty($fields)) {
+
+            send_json([
+
+                "success" => false,
+
+                "message" => "No fields to update"
+
+            ], 400);
+
+        }
+
+        $values[] = $id;
+
+        $stmt = $pdo->prepare("
+
+            UPDATE resources
+
+            SET " . implode(", ", $fields) . "
+
+            WHERE id = ?
+
+        ");
+
+        $stmt->execute($values);
+
+        send_json([
+
+            "success" => true
+
         ]);
-        exit;
+
     }
 
-    if ($action === "delete") {
-        requireAdmin();
+    if ($method === "DELETE") {
 
-        $data = getInputData();
+        if ($action === "delete_comment") {
 
-        $id = $data["id"] ?? null;
+            $commentId = isset($_GET["comment_id"]) ? (int) $_GET["comment_id"] : 0;
 
-        if (!$id) {
-            http_response_code(400);
-            echo json_encode([
-                "success" => false,
-                "message" => "Resource ID is required"
+            if ($commentId <= 0) {
+
+                send_json([
+
+                    "success" => false,
+
+                    "message" => "comment_id is required"
+
+                ], 400);
+
+            }
+
+            $stmt = $pdo->prepare("SELECT id FROM comments_resource WHERE id = ?");
+
+            $stmt->execute([$commentId]);
+
+            if (!$stmt->fetch(PDO::FETCH_ASSOC)) {
+
+                send_json([
+
+                    "success" => false,
+
+                    "message" => "Comment not found"
+
+                ], 404);
+
+            }
+
+            $delete = $pdo->prepare("DELETE FROM comments_resource WHERE id = ?");
+
+            $delete->execute([$commentId]);
+
+            send_json([
+
+                "success" => true
+
             ]);
-            exit;
+
+        }
+
+        $id = isset($_GET["id"]) ? (int) $_GET["id"] : 0;
+
+        if ($id <= 0) {
+
+            send_json([
+
+                "success" => false,
+
+                "message" => "id is required"
+
+            ], 400);
+
+        }
+
+        if (!resource_exists($pdo, $id)) {
+
+            send_json([
+
+                "success" => false,
+
+                "message" => "Resource not found"
+
+            ], 404);
+
         }
 
         $stmt = $pdo->prepare("DELETE FROM comments_resource WHERE resource_id = ?");
+
         $stmt->execute([$id]);
 
         $stmt = $pdo->prepare("DELETE FROM resources WHERE id = ?");
+
         $stmt->execute([$id]);
 
-        echo json_encode([
-            "success" => true,
-            "message" => "Resource deleted successfully"
+        send_json([
+
+            "success" => true
+
         ]);
-        exit;
+
     }
 
-    http_response_code(400);
-    echo json_encode([
-        "success" => false,
-        "message" => "Invalid action"
-    ]);
+    send_json([
 
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode([
         "success" => false,
+
+        "message" => "Method not allowed"
+
+    ], 405);
+
+} catch (Throwable $e) {
+
+    send_json([
+
+        "success" => false,
+
         "message" => "Server error"
-    ]);
+
+    ], 500);
+
 }
+
 ?>

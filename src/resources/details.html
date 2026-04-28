@@ -1,39 +1,73 @@
 <!DOCTYPE html>
+
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Resource Details</title>
+
+    <script src="details.js" defer></script>
+
 </head>
+
 <body>
 
     <header>
+
         <h1 id="resource-title">Resource Details</h1>
+
         <a href="list.html">Back to Resources</a>
+
     </header>
 
     <main>
-        <section id="resource-details">
-            Loading resource details...
+
+        <section id="resource-info">
+
+            <p id="resource-description">Loading resource description...</p>
+
+            <a id="resource-link" href="#" target="_blank">Open Resource</a>
+
         </section>
 
-        <section id="comments-section">
-            <h2>Comments</h2>
+        <section id="discussion-forum">
 
-            <div id="comments-container">
+            <h2>Discussion</h2>
+
+            <div id="comment-list">
+
                 Loading comments...
+
             </div>
 
             <form id="comment-form">
-                <label for="comment-input">Add Comment</label>
-                <br>
-                <textarea id="comment-input" required></textarea>
-                <br>
-                <button type="submit">Submit Comment</button>
+
+                <fieldset>
+
+                    <legend>Add a Comment</legend>
+
+                    <label for="new-comment">Comment</label>
+
+                    <br>
+
+                    <textarea id="new-comment" required></textarea>
+
+                    <br>
+
+                    <button type="submit">Submit Comment</button>
+
+                </fieldset>
+
             </form>
+
         </section>
+
     </main>
 
-    <script src="details.js"></script>
 </body>
+
 </html>

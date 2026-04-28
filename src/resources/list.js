@@ -1,42 +1,57 @@
 document.addEventListener("DOMContentLoaded", function () {
+
     loadResources();
+
 });
 
-async function loadResources() {
-    const container = document.getElementById("resources-container");
+function createResourceArticle(resource) {
 
-    if (!container) {
+    const article = document.createElement("article");
+
+    article.innerHTML = `
+
+        <h2>${resource.title}</h2>
+
+        <p>${resource.description}</p>
+
+        <a href="details.html?id=${resource.id}">View Details</a>
+
+    `;
+
+    return article;
+
+}
+
+async function loadResources() {
+
+    const section = document.getElementById("resource-list-section");
+
+    if (!section) {
+
         return;
+
     }
 
     try {
-        const response = await fetch("api/index.php?action=list");
-        const data = await response.json();
 
-        if (!data.success || data.resources.length === 0) {
-            container.innerHTML = "<p>No resources found.</p>";
-            return;
-        }
+        const response = await fetch("./api/index.php");
 
-        container.innerHTML = "";
+        const result = await response.json();
 
-        data.resources.forEach(function (resource) {
-            const article = document.createElement("article");
+        const resources = result.data || result.resources || [];
 
-            article.innerHTML = `
-                <h3>${resource.title}</h3>
-                <p>${resource.description}</p>
-                <a href="${resource.link}" target="_blank">Open Resource</a>
-                <br>
-                <a href="details.html?id=${resource.id}">View Details</a>
-                <hr>
+        section.innerHTML = "";
 
-            `;
+        resources.forEach(function (resource) {
 
-            container.appendChild(article);
+            section.appendChild(createResourceArticle(resource));
+
         });
 
     } catch (error) {
-        container.innerHTML = "<p>Error loading resources.</p>";
+
+        section.innerHTML = "";
+
     }
-}  
+
+}
