@@ -1,7 +1,9 @@
 <?php
 /**
  * Discussion Board API
+ *
  * RESTful API for CRUD operations on discussion topics and their replies.
+ * Uses PDO to interact with the MySQL database defined in schema.sql.
  */
 
 // ============================================================================
@@ -36,26 +38,25 @@ $topicId = $_GET['topic_id'] ?? null;
 
 function getAllTopics(PDO $db): void
 {
-    $sql = "SELECT id, subject, message, author, created_at FROM topics";
+    $sql= "SELECT id, subject, message, author, created_at FROM topics";
     $params = [];
 
     if (!empty($_GET['search'])) {
-        $search = $_GET['search'];
-        $sql .= " WHERE subject LIKE ? OR message LIKE ? OR author LIKE ?";
-        $searchTerm = '%' . $search . '%';
-        $params = [$searchTerm, $searchTerm, $searchTerm]; 
+        $search= $_GET['search'];
+        $sql .= " WHERE subject LIKE :search OR message LIKE :search OR author LIKE :search";
+        $params['search'] = '%' . $search . '%'; 
     }
 
     $allowedSorts = ['subject', 'author', 'created_at'];
-    $sort = in_array($_GET['sort'] ?? '', $allowedSorts) ? $_GET['sort'] : 'created_at';
-    $order = in_array($_GET['order'] ?? '', ['asc', 'desc']) ? $_GET['order'] : 'desc';
+    $sort= in_array($_GET['sort'] ?? '', $allowedSorts) ? $_GET['sort'] : 'created_at';
+    $order= in_array($_GET['order'] ?? '', ['asc', 'desc']) ? $_GET['order'] : 'desc';
 
     $sql .= " ORDER BY $sort $order";
 
     $stmt = $db->prepare($sql);
     $stmt->execute($params);
+    $topics= $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $topics = $stmt->fetchAll(PDO::FETCH_ASSOC);
     sendResponse(['success' => true, 'data' => $topics]);
 }
 
@@ -67,8 +68,8 @@ function getTopicById(PDO $db, $id): void
 
     $stmt = $db->prepare("SELECT id, subject, message, author, created_at FROM topics WHERE id = ?");
     $stmt->execute([$id]);
+
     $topic = $stmt->fetch(PDO::FETCH_ASSOC);
-    
     if ($topic) {
         sendResponse(['success' => true, 'data' => $topic]);
     } else {
@@ -78,18 +79,16 @@ function getTopicById(PDO $db, $id): void
 
 function createTopic(PDO $db, array $data): void
 {
-    if (!isset($data['subject']) || trim($data['subject']) === '' || 
-        !isset($data['message']) || trim($data['message']) === '' || 
-        !isset($data['author'])  || trim($data['author']) === '') {
+    if (empty($data['subject']) || empty($data['message']) || empty($data['author'])) {
         sendResponse(['success' => false, 'message' => 'Missing required fields'], 400); 
     }
 
-    $subject = sanitizeInput($data['subject']);
-    $message = sanitizeInput($data['message']);
-    $author = sanitizeInput($data['author']);
+    $subject= sanitizeInput($data['subject']);
+    $message= sanitizeInput($data['message']);
+    $author= sanitizeInput($data['author']);
 
-    $sql = 'INSERT INTO topics (subject, message, author) VALUES (?, ?, ?)';
-    $stmt = $db->prepare($sql);
+    $sql= 'INSERT INTO topics (subject, message, author) VALUES (?, ?, ?)';
+    $stmt= $db->prepare($sql);
 
     if ($stmt->execute([$subject, $message, $author])) {
         sendResponse(['success' => true, 'message' => 'Topic created successfully', 'id' => $db->lastInsertId()], 201);
@@ -104,7 +103,7 @@ function updateTopic(PDO $db, array $data): void
         sendResponse(['success' => false, 'message' => 'Missing or invalid ID'], 400); 
     }
 
-    $check = $db->prepare("SELECT id FROM topics WHERE id = ?");
+    $check= $db->prepare("SELECT id FROM topics WHERE id = ?");
     $check->execute([$data['id']]);
     if (!$check->fetch()) {
         sendResponse(['success' => false, 'message' => 'Topic not found'], 404);
@@ -125,8 +124,7 @@ function updateTopic(PDO $db, array $data): void
     if (empty($fields)) {
         sendResponse(['success' => false, 'message' => 'No updatable fields provided'], 400);
     }
-    
-    $params[] = $data['id'];
+    $params[]= $data['id'];
 
     $sql = 'UPDATE topics SET ' . implode(', ', $fields) . ' WHERE id = ?';
     $stmt = $db->prepare($sql);
@@ -134,7 +132,7 @@ function updateTopic(PDO $db, array $data): void
     if ($stmt->execute($params)) {
         sendResponse(['success' => true, 'message' => 'Topic updated']);
     } else {
-        sendResponse(['success' => false, 'message' => 'Update Failed'], 500);
+        sendResponse(['success' => false, 'message' => ' update Failed'], 500);
     }
 }
 
@@ -144,7 +142,7 @@ function deleteTopic(PDO $db, $id): void
         sendResponse(['success' => false, 'message' => 'Invalid ID'], 400); 
     }
 
-    $check = $db->prepare("SELECT id FROM topics WHERE id = ?");
+    $check= $db->prepare("SELECT id FROM topics WHERE id = ?");
     $check->execute([$id]);
     if (!$check->fetch()) {
         sendResponse(['success' => false, 'message' => 'Topic not found'], 404);
@@ -169,41 +167,37 @@ function getRepliesByTopicId(PDO $db, $topicId): void
         sendResponse(['success' => false, 'message' => 'Invalid topic ID'], 400);
     }
 
-    $stmt = $db->prepare("SELECT id, topic_id, text, author, created_at FROM replies WHERE topic_id = ? ORDER BY created_at ASC");
+    $stmt= $db->prepare("SELECT id, topic_id, text, author, created_at FROM replies WHERE topic_id = ? ORDER BY created_at ASC");
     $stmt->execute([$topicId]);
 
-    $replies = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $replies= $stmt->fetchAll(PDO::FETCH_ASSOC);
     sendResponse(['success' => true, 'data' => $replies]);
 }
 
 function createReply(PDO $db, array $data): void
 {
-    if (!isset($data['topic_id']) || !isset($data['text']) || trim($data['text']) === '' || !isset($data['author']) || trim($data['author']) === '') {
+    if (empty($data['topic_id']) || empty($data['text']) || empty($data['author'])) {
         sendResponse(['success' => false, 'message' => 'Missing fields'], 400);
     }
-    
     if (!is_numeric($data['topic_id'])) {
         sendResponse(['success' => false, 'message' => 'Invalid topic_id'], 400);
     }
-
-    $check = $db->prepare("SELECT id FROM topics WHERE id = ?");
+    $check= $db->prepare("SELECT id FROM topics WHERE id = ?");
     $check->execute([$data['topic_id']]);
 
     if (!$check->fetch()) {
         sendResponse(['success' => false, 'message' => 'Topic not found'], 404);
     }
+    $text= sanitizeInput($data['text']);
+    $author= sanitizeInput($data['author']);
 
-    $text = sanitizeInput($data['text']);
-    $author = sanitizeInput($data['author']);
-
-    $stmt = $db->prepare("INSERT INTO replies (topic_id, text, author) VALUES (?, ?, ?)");
+    $stmt= $db->prepare("INSERT INTO replies (topic_id, text, author) VALUES (?, ?, ?)");
     if ($stmt->execute([$data['topic_id'], $text, $author])) {
         $newid = $db->lastInsertId();
         
         $stmt = $db->prepare("SELECT id, topic_id, text, author, created_at FROM replies WHERE id = ?");
         $stmt->execute([$newid]);
-        
-        sendResponse(['success' => true, 'message' => 'Reply added', 'data' => $stmt->fetch(PDO::FETCH_ASSOC)], 201);
+        sendResponse(['success' => true, 'message' => 'Reply added', 'data' =>$stmt->fetch(PDO::FETCH_ASSOC)], 201);
     } else { 
         sendResponse(['success' => false, 'message' => 'Failed to add reply'], 500);
     }
@@ -211,25 +205,24 @@ function createReply(PDO $db, array $data): void
 
 function deleteReply(PDO $db, $replyId): void
 {
+    function deleteReply(PDO $db, $replyId): void
+{
     if (!isset($replyId) || !is_numeric($replyId)) {
         sendResponse(['success' => false, 'message' => 'Invalid ID'], 400);
     }
-
     $check = $db->prepare("SELECT id FROM replies WHERE id = ?");
     $check->execute([$replyId]);
-    
     if (!$check->fetch()) {
         sendResponse(['success' => false, 'message' => 'Reply not found'], 404);
     }
-
     $stmt = $db->prepare("DELETE FROM replies WHERE id = ?");
-    $stmt->execute([$replyId]);
     
-    if ($stmt->rowCount() > 0) {
+    if ($stmt->execute([$replyId])) {
         sendResponse(['success' => true, 'message' => 'Reply deleted'], 200);
-    } else {
+    } else {    
         sendResponse(['success' => false, 'message' => 'Failed to delete reply'], 500);
     }
+}
 }
 
 // ============================================================================
@@ -241,7 +234,7 @@ try {
         if ($action === 'replies') {
             getRepliesByTopicId($db, $topicId);
         } elseif ($id) {
-            getTopicById($db, $id);
+             getTopicById($db, $id);
         } else {
             getAllTopics($db);
         }
