@@ -63,33 +63,45 @@
 // Allow cross-origin requests (CORS) if needed.
 // Allow HTTP methods: GET, POST, PUT, DELETE, OPTIONS.
 // Allow headers: Content-Type, Authorization.
+header ('Content-Type: application/json; charset=utf-8');
+header ('Access-Control-Allow-Origin: *');
+header ('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header ('Access-Control-Allow-Headers: Content-Type, Authorization');
 
 
 // TODO: Handle preflight OPTIONS request.
 // If the request method is OPTIONS, return HTTP 200 and exit.
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
 
 
 // TODO: Include the shared database connection file.
 // require_once __DIR__ . '/../../common/db.php';
-
+require_once __DIR__ . '/../../common/db.php';
 
 // TODO: Get the PDO database connection.
 // $db = getDBConnection();
-
+$db = getDBConnection();
 
 // TODO: Read the HTTP request method.
 // $method = $_SERVER['REQUEST_METHOD'];
-
+$method = $_SERVER['REQUEST_METHOD'];
 
 // TODO: Read and decode the request body for POST and PUT requests.
 // $rawData = file_get_contents('php://input');
 // $data    = json_decode($rawData, true) ?? [];
-
+$rawData = file_get_contents('php://input');
+$data = json_decode($rawData, true) ?? [];
 
 // TODO: Read query parameters.
 // $action  = $_GET['action']   ?? null;  // 'replies', 'reply', 'delete_reply'
 // $id      = $_GET['id']       ?? null;  // integer topic or reply id
 // $topicId = $_GET['topic_id'] ?? null;  // integer topic id for replies queries
+$action = $_GET['action'] ?? null;
+$id = $_GET['id'] ?? null;
+$topicId = $_GET['topic_id'] ?? null;
 
 
 // ============================================================================
@@ -393,6 +405,9 @@ function sendResponse(array $data, int $statusCode = 200): void
     // TODO: http_response_code($statusCode);
     // TODO: echo json_encode($data, JSON_PRETTY_PRINT);
     // TODO: exit;
+    http_response_code($statusCode);
+    echo json_encode($data, JSON_PRETTY_PRINT);
+    exit;
 }
 
 
@@ -405,4 +420,5 @@ function sendResponse(array $data, int $statusCode = 200): void
 function sanitizeInput(string $data): string
 {
     // TODO: return htmlspecialchars(strip_tags(trim($data)), ENT_QUOTES, 'UTF-8');
+    return htmlspecialchars(strip_tags(trim($data)), ENT_QUOTES, 'UTF-8');
 }
