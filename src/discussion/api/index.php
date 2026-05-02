@@ -122,7 +122,7 @@ function getAllTopics(PDO $db): void
     // TODO: Build the base SELECT query.
     // SELECT id, subject, message, author, created_at FROM topics
 $sql= "SELECT id, subject, message, author, created_at FROM topics";
-
+$params= [];
     // TODO: If $_GET['search'] is provided and non-empty, append:
     // WHERE subject LIKE :search OR message LIKE :search OR author LIKE :search
     // Bind '%' . $search . '%' to :search.
@@ -498,16 +498,9 @@ if ($action === 'delete_reply') {
     deleteReply($db, $id);
 } else  {
     deleteTopic($db, $id);
-    
-        // ?action=delete_reply&id={id} → delete one reply
-        // TODO: if $action === 'delete_reply', call deleteReply($db, $id)
-
-        // ?id={id} → delete a topic (and its replies via CASCADE)
-        // TODO: else call deleteTopic($db, $id)
-
+}
     } else {
-        sendResponse(['success' => false, 'message' => 'Invalid action for DELETE method'], 405);}
-        // TODO: sendResponse HTTP 405 Method Not Allowed.
+        sendResponse(['success' => false, 'message' => 'Invalid action for DELETE method'], 405);
     }
 
 } catch (PDOException $e) {
