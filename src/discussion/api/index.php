@@ -121,25 +121,38 @@ function getAllTopics(PDO $db): void
 {
     // TODO: Build the base SELECT query.
     // SELECT id, subject, message, author, created_at FROM topics
+$sql= "SELECT id, subject, message, author, created_at FROM topics";
 
     // TODO: If $_GET['search'] is provided and non-empty, append:
     // WHERE subject LIKE :search OR message LIKE :search OR author LIKE :search
     // Bind '%' . $search . '%' to :search.
+if (!empty($_GET['search'])) {
+    $search= $_GET['search'];
+    $sql .= " WHERE subject LIKE :search OR message LIKE :search OR author LIKE :search";
+    $params['search'] = '%' . $search . '%'; }
 
     // TODO: Validate $_GET['sort'] against the whitelist
     // [subject, author, created_at].
     // Default to 'created_at' if missing or invalid.
+$allowedSorts = ['subject', 'author', 'created_at'];
+$sort= in_array($_GET['sort'] ?? '', $allowedSorts) ? $_GET['sort'] : 'created_at';
 
     // TODO: Validate $_GET['order'] against [asc, desc].
     // Default to 'desc' if missing or invalid.
+$order= in_array($_GET['order'] ?? '', ['asc', 'desc']) ? $_GET['order'] : 'desc';
 
     // TODO: Append ORDER BY {sort} {order} to the query.
+$sql .= " ORDER BY $sort $order";
 
     // TODO: Prepare, bind (if searching), and execute the statement.
+$stmt = $db->prepare($sql);
+$stmt->execute($params ?? []);
 
     // TODO: Fetch all rows as an associative array.
+$topics= $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // TODO: Call sendResponse(['success' => true, 'data' => $topics]);
+sendResponse(['success' => true, 'data' => $topics]);
 }
 
 
@@ -155,13 +168,24 @@ function getTopicById(PDO $db, $id): void
 {
     // TODO: Validate that $id is provided and numeric.
     // If not, sendResponse HTTP 400.
+if (!$id || !is_numeric($id)) {
+    sendResponse(['success' => false, 'message' => 'Invalid or missing id parameter.'], 400); }
 
     // TODO: SELECT id, subject, message, author, created_at
     //       FROM topics WHERE id = ?
+$stmt = $db->prepare("SELECT id, subject, message, author, created_at FROM topics WHERE id = ?");
+$stmt->execute([$id]);
 
     // TODO: Fetch one row.
     // If found, sendResponse success with the topic.
     // If not found, sendResponse HTTP 404.
+    $topic = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($topic) {
+        sendResponse(['success' => true, 'data' => $topic]);
+    } else {
+        sendResponse(['success' => false, 'message' => 'Topic not found.'], 404);
+    }
+
 }
 
 
@@ -183,17 +207,29 @@ function createTopic(PDO $db, array $data): void
 {
     // TODO: Validate that subject, message, and author are present and
     // non-empty. If missing, sendResponse HTTP 400.
+if (empty($data['subject']) || empty($data['message']) || empty($data['author'])) {
+    sendResponse(['success' => false, 'message' => 'Missing required fields'], 400); }
 
     // TODO: Trim subject, message, and author.
+$subject= sanitizeInput($data['subject']);
+$message= sanitizeInput($data['message']);
+$author= sanitizeInput($data['author']);
 
     // TODO: INSERT INTO topics (subject, message, author) VALUES (?, ?, ?)
     // Note: id and created_at are set automatically by MySQL.
+$sql= 'INSERT INTO topics (subject, message, author) VALUES (?, ?, ?)';
+$stmt= $db->prepare($sql);
 
     // TODO: If rowCount() > 0, sendResponse HTTP 201 with the new integer
     // id from $db->lastInsertId().
     // Otherwise sendResponse HTTP 500.
+if ($stmt->execute([$subject, $message, $author])) {
+    sendResponse(['success' => true, 'message' => 'Topic created successfully',
+     'id' => $db->lastInsertId()], 201);
+} else {
+    sendResponse(['success' => false, 'message' => 'Failed to create topic'], 500);
 }
-
+}
 
 /**
  * Update an existing topic.
@@ -211,21 +247,51 @@ function updateTopic(PDO $db, array $data): void
 {
     // TODO: Validate that $data['id'] is present.
     // If not, sendResponse HTTP 400.
+if (empty($data['id']) || !is_numeric($data['id'])) {
+    sendResponse(['success' => false, 'message' => 'Missing or invalid ID'], 400); }
 
     // TODO: Check that a topic with this id exists.
     // If not, sendResponse HTTP 404.
+$check= $db->prepare("SELECT id FROM topics WHERE id = ?");
+$check->execute([$data['id']]);
+if (!$check->fetch()) {
+    sendResponse(['success' => false, 'message' => 'Topic not found'], 404);
+}
 
     // TODO: Dynamically build the SET clause for whichever of
     // subject, message are present in $data.
+$fields = [];
+$params = [];
 
     // TODO: If no updatable fields are present, sendResponse HTTP 400.
+if (!empty($data['subject'])) {
+    $fields[] = 'subject = ?';
+    $params[] = sanitizeInput['subject'];
+}
+if (!empty($data['message'])) {
+    $fields[] = 'message = ?';
+    $params[] = $data['message'];
+}
+
+    // TODO: If no updatable fields are present, sendResponse HTTP 400.
+if (empty($fields)) {
+    sendResponse(['success' => false, 'message' => 'No updatable fields provided'], 400);
+}
+    // Add id for the WHERE clause
+$params[]= $data['id'];
 
     // TODO: Build: UPDATE topics SET {clauses} WHERE id = ?
     // Prepare, bind all SET values, then bind id, and execute.
+$sql = 'UPDATE topics SET ' . implode(', ', $fields) . ' WHERE id = ?';
+$stmt = $db->prepare($sql);
 
     // TODO: sendResponse HTTP 200 on success, HTTP 500 on failure.
+if ($stmt->execute($params)) {
+    sendResponse(['success' => true, 'message' => 'Topic updated']);
+} else {
+    sendResponse(['success' => false, 'message' => ' update Failed'], 500);
 }
-
+}
 
 /**
  * Delete a topic by integer id.
@@ -242,17 +308,29 @@ function deleteTopic(PDO $db, $id): void
 {
     // TODO: Validate that $id is provided and numeric.
     // If not, sendResponse HTTP 400.
+if (!$id || !is_numeric($id)) {
+    sendResponse(['success' => false, 'message' => 'Invalid ID'], 400); }
 
     // TODO: Check that a topic with this id exists.
     // If not, sendResponse HTTP 404.
+$check= $db->prepare("SELECT id FROM topics WHERE id = ?");
+$check->execute([$id]);
+if (!$check->fetch()) {
+    sendResponse(['success' => false, 'message' => 'Topic not found'], 404);
+}
 
     // TODO: DELETE FROM topics WHERE id = ?
     // (replies rows are removed automatically by ON DELETE CASCADE.)
+$stmt = $db->prepare("DELETE FROM topics WHERE id = ?");
 
     // TODO: If rowCount() > 0, sendResponse HTTP 200.
     // Otherwise sendResponse HTTP 500.
+if ($stmt->execute([$id]))  {
+    sendResponse(['success' => true, 'message' => 'Topic deleted']);
+} else {
+    sendResponse(['success' => false, 'message' => 'Delete Failed'], 500);
 }
-
+}
 
 // ============================================================================
 // REPLIES FUNCTIONS
