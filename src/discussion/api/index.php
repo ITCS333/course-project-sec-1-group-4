@@ -386,7 +386,7 @@ function createReply(PDO $db, array $data): void
 {
     // TODO: Validate that topic_id, text, and author are all present and
     // non-empty after trimming. If any are missing, sendResponse HTTP 400.
-if (empty($data['topic_id']) || empty(($data['text'])) || empty($data['author'])) {
+if (empty($data['topic_id']) || empty($data['text']) || empty($data['author'])) {
     sendResponse(['success' => false, 'message' => 'Missing fields'], 400);
 }
     // TODO: Validate that topic_id is numeric.
