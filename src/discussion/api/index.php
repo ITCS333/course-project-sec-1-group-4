@@ -266,11 +266,11 @@ $params = [];
     // TODO: If no updatable fields are present, sendResponse HTTP 400.
 if (!empty($data['subject'])) {
     $fields[] = 'subject = ?';
-    $params[] = sanitizeInput['subject'];
+    $params[] = sanitizeInput($data['subject']);
 }
 if (!empty($data['message'])) {
     $fields[] = 'message = ?';
-    $params[] = $data['message'];
+    $params[] = sanitizeInput($data['message']);
 }
 
     // TODO: If no updatable fields are present, sendResponse HTTP 400.
@@ -463,7 +463,13 @@ try {
 
         // ?action=replies&topic_id={id} → list replies for a topic
         // TODO: if $action === 'replies', call getRepliesByTopicId($db, $topicId)
-
+if ($action === 'replies') {
+    getRepliesByTopicId($db, $topicId);
+} elseif ($id) {
+     getTopicById($db, $id);
+} else {
+    getAllTopics($db);
+}
         // ?id={id} → single topic
         // TODO: elseif $id is set, call getTopicById($db, $id)
 
@@ -471,7 +477,11 @@ try {
         // TODO: else call getAllTopics($db)
 
     } elseif ($method === 'POST') {
-
+if ($action === 'reply') {
+    createReply($db, $data);
+} else {
+    createTopic($db, $data);
+}
         // ?action=reply → create a reply in the replies table
         // TODO: if $action === 'reply', call createReply($db, $data)
 
@@ -479,12 +489,16 @@ try {
         // TODO: else call createTopic($db, $data)
 
     } elseif ($method === 'PUT') {
-
+updateTopic($db, $data);
         // Update a topic; id comes from the JSON body
         // TODO: call updateTopic($db, $data)
 
     } elseif ($method === 'DELETE') {
-
+if ($action === 'delete_reply') {
+    deleteReply($db, $id);
+} else  {
+    deleteTopic($db, $id);
+    
         // ?action=delete_reply&id={id} → delete one reply
         // TODO: if $action === 'delete_reply', call deleteReply($db, $id)
 
@@ -492,16 +506,20 @@ try {
         // TODO: else call deleteTopic($db, $id)
 
     } else {
+        sendResponse(['success' => false, 'message' => 'Invalid action for DELETE method'], 405);}
         // TODO: sendResponse HTTP 405 Method Not Allowed.
     }
 
 } catch (PDOException $e) {
     // TODO: Log the error with error_log().
     // Return a generic HTTP 500 — do NOT expose $e->getMessage() to clients.
-
+error_log($e->getMessage());
+    sendResponse(['success' => false, 'message' => 'Database Error'], 500);
 } catch (Exception $e) {
     // TODO: Log the error with error_log().
     // Return HTTP 500 using sendResponse().
+    error_log($e->getMessage());
+    sendResponse(['success' => false, 'message' => 'Server Error'], 500);
 }
 
 
