@@ -4,10 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Assignment Details</title>
-    <script src="../../assets/js/details.js" defer></script>
+    <script src="details.js" defer></script>
 </head>
 <body>
-    <h1>Assignment Details</h1>
-    <div id="assignment-detail"></div>
+    <header>
+        <h1 id="assignment-title"></h1>
+    </header>
+    <main>
+        <p id="assignment-due-date"></p>
+        <p id="assignment-description"></p>
+        <ul id="assignment-files-list"></ul>
+        <section id="discussion-forum">
+            <h2>Discussion</h2>
+            <div id="comment-list"></div>
+            <form id="comment-form" action="#">
+                <fieldset>
+                    <legend>Leave a Comment</legend>
+                    <label for="new-comment">Comment</label>
+                    <textarea id="new-comment" required></textarea>
+                    <button type="submit">Post Comment</button>
+                </fieldset>
+            </form>
+        </section>
+    </main>
 </body>
 </html>

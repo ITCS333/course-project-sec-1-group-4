@@ -1,22 +1,33 @@
-document.addEventListener("DOMContentLoaded", () => {
-    fetchAssignments();
+document.addEventListener('DOMContentLoaded', () => {
+    loadAssignments();
 });
 
-function fetchAssignments() {
+function loadAssignments() {
     fetch('/api/index.php')
         .then(response => response.json())
-        .then(assignments => {
-            const tableBody = document.querySelector('#assignments-table tbody');
-            assignments.forEach(assignment => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${assignment.title}</td>
-                    <td>${assignment.description}</td>
-                    <td>${assignment.due_date}</td>
-                    <td><a href="details.html?id=${assignment.id}">View</a></td>
-                `;
-                tableBody.appendChild(row);
-            });
-        })
-        .catch(error => console.error('Error fetching assignments:', error));
+        .then(data => {
+            if (data.success) {
+                renderAssignments(data.data);
+            }
+        });
+}
+
+function renderAssignments(assignments) {
+    const assignmentsList = document.getElementById('assignments-list');
+    assignmentsList.innerHTML = '';
+    assignments.forEach(assignment => {
+        const article = createAssignmentArticle(assignment);
+        assignmentsList.appendChild(article);
+    });
+}
+
+function createAssignmentArticle(assignment) {
+    const article = document.createElement('article');
+    article.innerHTML = `
+        <h3>${assignment.title}</h3>
+        <p>${assignment.due_date}</p>
+        <p>${assignment.description}</p>
+        <a href="details.html?id=${assignment.id}">View Details</a>
+    `;
+    return article;
 }
