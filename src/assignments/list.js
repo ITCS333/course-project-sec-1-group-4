@@ -1,33 +1,28 @@
-document.addEventListener('DOMContentLoaded', () => {
-    loadAssignments();
-});
-
-function loadAssignments() {
-    fetch('/api/index.php')
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                renderAssignments(data.data);
-            }
-        });
-}
-
-function renderAssignments(assignments) {
-    const assignmentsList = document.getElementById('assignments-list');
-    assignmentsList.innerHTML = '';
-    assignments.forEach(assignment => {
-        const article = createAssignmentArticle(assignment);
-        assignmentsList.appendChild(article);
-    });
-}
+// src/assignments/list.js
 
 function createAssignmentArticle(assignment) {
-    const article = document.createElement('article');
-    article.innerHTML = `
-        <h3>${assignment.title}</h3>
-        <p>${assignment.due_date}</p>
-        <p>${assignment.description}</p>
-        <a href="details.html?id=${assignment.id}">View Details</a>
-    `;
-    return article;
+  const article = document.createElement('article');
+  article.innerHTML = `
+    <h2>${assignment.title}</h2>
+    <p>Due: ${assignment.due_date}</p>
+    <p>${assignment.description}</p>
+    <a href="details.html?id=${assignment.id}">View</a>
+  `;
+  return article;
 }
+
+function loadAssignments() {
+  fetch('./api/index.php')
+    .then(response => response.json())
+    .then(data => {
+      const assignments = data.data;
+      const section = document.getElementById('assignment-list-section');
+      section.innerHTML = '';  // Clear the existing content
+      assignments.forEach(assignment => {
+        section.appendChild(createAssignmentArticle(assignment));
+      });
+    })
+    .catch(error => console.error(error));
+}
+
+loadAssignments();

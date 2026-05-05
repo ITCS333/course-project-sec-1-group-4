@@ -1,37 +1,35 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const form = document.getElementById('assignment-form');
-    form.addEventListener('submit', handleAddAssignment);
-});
+// src/assignments/admin.js
 
-function handleAddAssignment(event) {
-    event.preventDefault();
-
-    const title = document.getElementById('assignment-title').value;
-    const description = document.getElementById('assignment-description').value;
-    const dueDate = document.getElementById('assignment-due-date').value;
-    const files = document.getElementById('assignment-files').value;
-
-    const newAssignment = {
-        title,
-        description,
-        dueDate,
-        files,
-    };
-
-    renderAssignment(newAssignment);
+function createAssignmentRow(assignment) {
+  const row = document.createElement('tr');
+  row.innerHTML = `
+    <td>${assignment.title}</td>
+    <td>${assignment.due_date}</td>
+    <td>${assignment.description}</td>
+    <td>
+      <button class="edit-btn" data-id="${assignment.id}">Edit</button>
+      <button class="delete-btn" data-id="${assignment.id}">Delete</button>
+    </td>
+  `;
+  return row;
 }
 
-function renderAssignment(assignment) {
-    const tbody = document.getElementById('assignments-tbody');
-    const row = document.createElement('tr');
-    row.innerHTML = `
-        <td>${assignment.title}</td>
-        <td>${assignment.dueDate}</td>
-        <td>${assignment.description}</td>
-        <td>
-            <button class="edit-btn">Edit</button>
-            <button class="delete-btn">Delete</button>
-        </td>
-    `;
-    tbody.appendChild(row);
+function renderTable() {
+  const tbody = document.getElementById('assignments-tbody');
+  tbody.innerHTML = '';  // Clear the existing content
+  assignments.forEach(assignment => {
+    tbody.appendChild(createAssignmentRow(assignment));
+  });
 }
+
+function loadAndInitialize() {
+  fetch('./api/index.php')
+    .then(response => response.json())
+    .then(data => {
+      assignments = data.data;
+      renderTable();
+    })
+    .catch(error => console.error(error));
+}
+
+loadAndInitialize();
