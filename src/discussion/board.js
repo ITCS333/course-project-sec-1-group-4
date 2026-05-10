@@ -10,15 +10,16 @@ const topicListContainer = document.getElementById('topic-list-container');
 
 function createTopicArticle(topic) {
     const article = document.createElement('article');
-
-    article.innerHTML = `
-        <h3><a href="topic.html?id=${topic.id}">${topic.subject}</a></h3>
-        <footer>Posted by: ${topic.author} on ${topic.created_at}</footer>
-        <div>
-            <button class="edit-btn" data-id="${topic.id}">Edit</button>
-            <button class="delete-btn" data-id="${topic.id}">Delete</button>
-        </div>
-    `;
+    
+    article.className= "list-group-item list-group-item-action p-4 mb-2 shadow-sm border-0";
+    article.innerHTML = 
+       ` <h3 class="h5 text-primary"> <a href="topic.html?id=${topic.id}" class="text-decoration-none">${topic.subject}</a></h3>
+        <footer class="text-muted small">Posted by: ${topic.author} on ${topic.created_at}</footer>
+        <div class="mt-3">
+            <button class="edit-btn btn btn-outline-info btn-sm me-2" data-id="${topic.id}">Edit</button>
+            <button class="delete-btn btn btn-outline-danger btn-sm" data-id="${topic.id}">Delete</button>
+        </div> `
+    ;
     return article;
 }
 

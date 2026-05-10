@@ -26,12 +26,16 @@ function renderOriginalPost(topic) {
 
 function createReplyArticle(reply) {
     const article = document.createElement('article');
+
+    article.className = "card mb-3 shadow-sm border-0";
     article.innerHTML = `
-        <p>${reply.text}</p>
-        <footer>Posted by: ${reply.author} on ${reply.created_at}</footer>
-        <div>
-            <button class="delete-reply-btn" data-id="${reply.id}">Delete</button>
+    <div class="card-body">
+        <p class="card-text">${reply.text}</p>
+        <footer class="text-muted small">Posted by: ${reply.author} on ${reply.created_at}</footer>
+        <div class="mt-2 text-end">
+            <button class="delete-reply-btn btn btn-outline-danger btn-sm p-0" data-id="${reply.id}">Delete</button>
         </div>
+    </div>
     `;
     return article;
 }
