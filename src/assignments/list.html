@@ -1,52 +1,51 @@
-<!--
-  Requirement: Create the Student View for Assignments
-
-  Instructions:
-  This page is a read-only view for students to see all course assignments.
-  Each assignment should link to its dedicated detail page.
--->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- TODO: Add <meta> tags for charset (UTF-8) and viewport
-         (width=device-width, initial-scale=1.0). -->
-
-    <!-- TODO: Add a <title>, e.g., "Course Assignments". -->
-
-    <!-- TODO: Link to your CSS framework or stylesheet. -->
-
-    <!-- Required: link list.js with defer so the DOM is ready before the
-         script runs. -->
-    <script src="list.js" defer></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assignments - Course Assignments</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; }
+        header { background: #2c3e50; color: white; padding: 20px; text-align: center; }
+        header h1 { margin-bottom: 10px; }
+        nav a { color: white; text-decoration: none; margin: 0 10px; }
+        nav a:hover { text-decoration: underline; }
+        main { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+        #assignment-list-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        article {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        article:hover { transform: translateY(-3px); }
+        article h3 { color: #2c3e50; margin-bottom: 10px; }
+        .due-date { color: #e74c3c; font-size: 0.9em; margin: 10px 0; }
+        .description { color: #666; line-height: 1.5; margin: 10px 0; }
+        article a { display: inline-block; background: #3498db; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; margin-top: 10px; }
+        article a:hover { background: #2980b9; }
+        .loading { text-align: center; padding: 50px; color: #999; }
+    </style>
 </head>
 <body>
-
-    <!-- TODO: Create a <header> containing an <h1> "Course Assignments". -->
-
-    <!-- TODO: Create the <main> content area. -->
-
-        <!-- TODO: Create a <section id="assignment-list-section"> to contain
-             the list of assignment articles.
-             The id is required by list.js. -->
-
-            <!-- list.js will inject one <article> per assignment here.
-                 Each article follows the structure below. -->
-
-            <!-- Example Assignment Article Structure (do NOT hardcode real
-                 data; list.js fetches it from the API):
-
-            <article>
-                <h2>HTML &amp; CSS Portfolio</h2>
-                <p>Due: 2025-02-15</p>
-                <p>Create a responsive portfolio website...</p>
-                <a href="details.html?id=1">View Details &amp; Discussion</a>
-            </article>
-
-            Note: the href MUST be "details.html?id=<id>" so that
-            details.js can read the id from the URL query string. -->
-
-        <!-- End of #assignment-list-section -->
-    <!-- End of <main> -->
-
+    <header>
+        <h1>📚 Course Assignments</h1>
+        <nav>
+            <a href="../index.html">Home</a>
+            <a href="admin.html">Admin Panel</a>
+        </nav>
+    </header>
+    <main>
+        <section id="assignment-list-section">
+            <div class="loading">Loading assignments...</div>
+        </section>
+    </main>
+    <script src="list.js" defer></script>
 </body>
 </html>
