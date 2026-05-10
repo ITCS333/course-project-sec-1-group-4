@@ -4,28 +4,61 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Assignment Details</title>
-    <script src="details.js" defer></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f4f4f4; }
+        header { background: #2c3e50; color: white; padding: 20px; text-align: center; }
+        main { max-width: 800px; margin: 20px auto; padding: 0 20px; }
+        .card { background: white; border-radius: 8px; padding: 25px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        h1#assignment-title { color: #2c3e50; margin-bottom: 15px; }
+        p#assignment-due-date { color: #e74c3c; font-weight: bold; margin-bottom: 20px; padding: 10px; background: #ffe8e8; border-radius: 5px; display: inline-block; }
+        p#assignment-description { color: #555; line-height: 1.6; margin-bottom: 20px; }
+        ul#assignment-files-list { list-style: none; padding: 0; margin-top: 15px; }
+        ul#assignment-files-list li { padding: 8px 0; border-bottom: 1px solid #eee; }
+        ul#assignment-files-list a { color: #3498db; text-decoration: none; }
+        ul#assignment-files-list a:hover { text-decoration: underline; }
+        section#discussion-forum { background: white; border-radius: 8px; padding: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        section#discussion-forum h2 { color: #2c3e50; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #3498db; }
+        div#comment-list { margin-bottom: 20px; max-height: 400px; overflow-y: auto; }
+        article.comment { background: #f8f9fa; padding: 12px; margin-bottom: 12px; border-radius: 6px; border-left: 3px solid #3498db; }
+        article.comment p { margin: 0 0 5px 0; color: #333; }
+        article.comment footer { font-size: 0.8em; color: #888; margin-top: 5px; }
+        form#comment-form fieldset { border: 1px solid #ddd; border-radius: 6px; padding: 15px; }
+        form#comment-form legend { padding: 0 10px; font-weight: bold; }
+        form#comment-form label { display: block; margin-bottom: 5px; font-weight: bold; }
+        textarea#new-comment { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; min-height: 100px; }
+        button[type="submit"] { background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-top: 10px; }
+        button[type="submit"]:hover { background: #2980b9; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #3498db; text-decoration: none; }
+        .back-link:hover { text-decoration: underline; }
+    </style>
 </head>
 <body>
     <header>
-        <h1 id="assignment-title"></h1>
+        <h1>📖 Assignment Details</h1>
+        <nav><a href="list.html">← Back to Assignments</a></nav>
     </header>
     <main>
-        <p id="assignment-due-date"></p>
-        <p id="assignment-description"></p>
-        <ul id="assignment-files-list"></ul>
+        <a href="list.html" class="back-link">← All Assignments</a>
+        <div class="card">
+            <h1 id="assignment-title">Loading...</h1>
+            <p id="assignment-due-date"></p>
+            <p id="assignment-description">Loading description...</p>
+            <ul id="assignment-files-list"></ul>
+        </div>
         <section id="discussion-forum">
-            <h2>Discussion</h2>
-            <div id="comment-list"></div>
+            <h2>💬 Questions &amp; Discussion</h2>
+            <div id="comment-list">Loading comments...</div>
             <form id="comment-form" action="#">
                 <fieldset>
-                    <legend>Leave a Comment</legend>
-                    <label for="new-comment">Comment</label>
-                    <textarea id="new-comment" required></textarea>
+                    <legend>Ask a Question</legend>
+                    <label for="new-comment">Your Comment</label>
+                    <textarea id="new-comment" required placeholder="Write your question or comment here..."></textarea>
                     <button type="submit">Post Comment</button>
                 </fieldset>
             </form>
         </section>
     </main>
+    <script src="details.js" defer></script>
 </body>
 </html>

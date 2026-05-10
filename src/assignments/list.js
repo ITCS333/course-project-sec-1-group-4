@@ -1,41 +1,49 @@
-function loadAssignments() {
-    fetch('./api/index.php')
-        .then(response => response.json())
-        .then(data => {
-            if (data.success && data.data.length > 0) {
-                const assignmentList = document.getElementById('assignment-list-section');
-                assignmentList.innerHTML = ''; // Clear any existing content
+// API endpoint
+const API_URL = './api/index.php';
 
-                data.data.forEach(assignment => {
-                    const article = createAssignmentArticle(assignment);
-                    assignmentList.appendChild(article);
-                });
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-        });
-}
-
+// دالة إنشاء عنصر article لكل واجب
 function createAssignmentArticle(assignment) {
     const article = document.createElement('article');
-    const title = document.createElement('h2');
-    title.textContent = assignment.title;
-    const dueDate = document.createElement('p');
-    dueDate.textContent = `Due Date: ${assignment.due_date}`;
-    const description = document.createElement('p');
-    description.textContent = assignment.description;
-
-    const viewLink = document.createElement('a');
-    viewLink.href = `details.html?id=${assignment.id}`;
-    viewLink.textContent = 'View Details';
-
-    article.appendChild(title);
-    article.appendChild(dueDate);
-    article.appendChild(description);
-    article.appendChild(viewLink);
-
+    article.innerHTML = `
+        <h3>${escapeHtml(assignment.title)}</h3>
+        <div class="due-date">📅 Due: ${assignment.due_date}</div>
+        <div class="description">${escapeHtml(assignment.description)}</div>
+        <a href="details.html?id=${assignment.id}">View Assignment →</a>
+    `;
     return article;
 }
 
-loadAssignments();
+// دالة تحميل وجلب الواجبات من API
+async function loadAssignments() {
+    const container = document.getElementById('assignment-list-section');
+    container.innerHTML = '<div class="loading">Loading assignments...</div>';
+    
+    try {
+        const response = await fetch(API_URL);
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+            container.innerHTML = '';
+            result.data.forEach(assignment => {
+                container.appendChild(createAssignmentArticle(assignment));
+            });
+        } else {
+            container.innerHTML = '<div class="loading">No assignments found.</div>';
+        }
+    } catch (error) {
+        console.error('Error loading assignments:', error);
+        container.innerHTML = '<div class="loading">Error loading assignments. Please try again.</div>';
+    }
+}
+
+// دالة لتجنب XSS
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// تحميل الصفحة
+document.addEventListener('DOMContentLoaded', () => {
+    loadAssignments();
+});
