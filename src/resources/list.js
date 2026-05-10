@@ -1,57 +1,37 @@
 document.addEventListener("DOMContentLoaded", function () {
-
     loadResources();
-
 });
 
 function createResourceArticle(resource) {
-
     const article = document.createElement("article");
+    article.className = "border p-3 mb-3";
 
     article.innerHTML = `
-
         <h2>${resource.title}</h2>
-
         <p>${resource.description}</p>
-
-        <a href="details.html?id=${resource.id}">View Details</a>
-
+        <a class="btn btn-primary" href="details.html?id=${resource.id}">View Details</a>
     `;
 
     return article;
-
 }
 
-async function loadResources() {
+function loadResources() {
+    const container = document.getElementById("resources-container");
 
-    const section = document.getElementById("resource-list-section");
-
-    if (!section) {
-
+    if (!container) {
         return;
-
     }
 
-    try {
+    const resources = JSON.parse(localStorage.getItem("resources")) || [];
 
-        const response = await fetch("./api/index.php");
+    container.innerHTML = "";
 
-        const result = await response.json();
-
-        const resources = result.data || result.resources || [];
-
-        section.innerHTML = "";
-
-        resources.forEach(function (resource) {
-
-            section.appendChild(createResourceArticle(resource));
-
-        });
-
-    } catch (error) {
-
-        section.innerHTML = "";
-
+    if (resources.length === 0) {
+        container.innerHTML = "No resources found.";
+        return;
     }
 
+    resources.forEach(function (resource) {
+        container.appendChild(createResourceArticle(resource));
+    });
 }

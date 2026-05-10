@@ -1,167 +1,37 @@
-var currentComments = [];
-
 document.addEventListener("DOMContentLoaded", function () {
-
-    const form = document.getElementById("comment-form");
-
-    if (form) {
-
-        form.addEventListener("submit", handleAddComment);
-
-    }
-
-    initializePage();
-
+    loadResources();
 });
 
-function getResourceIdFromURL() {
-
-    const params = new URLSearchParams(window.location.search);
-
-    return params.get("id");
-
-}
-
-function renderResourceDetails(resource) {
-
-    document.getElementById("resource-title").textContent = resource.title;
-
-    document.getElementById("resource-description").textContent = resource.description;
-
-    document.getElementById("resource-link").setAttribute("href", resource.link);
-
-}
-
-function createCommentArticle(comment) {
-
+function createResourceArticle(resource) {
     const article = document.createElement("article");
+    article.className = "border p-3 mb-3";
 
-    const p = document.createElement("p");
-
-    p.textContent = comment.text || comment.comment || "";
-
-    const footer = document.createElement("footer");
-
-    footer.textContent = comment.author || ("User " + (comment.user_id || ""));
-
-    article.appendChild(p);
-
-    article.appendChild(footer);
+    article.innerHTML = `
+        <h2>${resource.title}</h2>
+        <p>${resource.description}</p>
+        <a class="btn btn-primary" href="details.html?id=${resource.id}">View Details</a>
+    `;
 
     return article;
-
 }
 
-function renderComments() {
+function loadResources() {
+    const container = document.getElementById("resources-container");
 
-    const list = document.getElementById("comment-list");
-
-    if (!list) {
-
+    if (!container) {
         return;
-
     }
 
-    list.innerHTML = "";
+    const resources = JSON.parse(localStorage.getItem("resources")) || [];
 
-    currentComments.forEach(function (comment) {
+    container.innerHTML = "";
 
-        list.appendChild(createCommentArticle(comment));
+    if (resources.length === 0) {
+        container.innerHTML = "No resources found.";
+        return;
+    }
 
+    resources.forEach(function (resource) {
+        container.appendChild(createResourceArticle(resource));
     });
-
-}
-
-function handleAddComment(event) {
-
-    event.preventDefault();
-
-    const textarea = document.getElementById("new-comment");
-
-    const text = textarea.value.trim();
-
-    if (text === "") {
-
-        return;
-
-    }
-
-    const resourceId = getResourceIdFromURL();
-
-    fetch("./api/index.php?action=comment", {
-
-        method: "POST",
-
-        headers: {
-
-            "Content-Type": "application/json"
-
-        },
-
-        body: JSON.stringify({
-
-            resource_id: resourceId,
-
-            text: text,
-
-            comment: text
-
-        })
-
-    })
-
-    .then(function (response) {
-
-        return response.json();
-
-    })
-
-    .then(function (result) {
-
-        textarea.value = "";
-
-        if (result.data) {
-
-            currentComments.push(result.data);
-
-            renderComments();
-
-        }
-
-    });
-
-}
-
-async function initializePage() {
-
-    const id = getResourceIdFromURL();
-
-    if (!id) {
-
-        return;
-
-    }
-
-    const resourceResponse = await fetch("./api/index.php?id=" + encodeURIComponent(id));
-
-    const resourceResult = await resourceResponse.json();
-
-    if (resourceResult.data) {
-
-        renderResourceDetails(resourceResult.data);
-
-    } else if (resourceResult.resource) {
-
-        renderResourceDetails(resourceResult.resource);
-
-    }
-
-    const commentsResponse = await fetch("./api/index.php?action=comments&resource_id=" + encodeURIComponent(id));
-
-    const commentsResult = await commentsResponse.json();
-
-    currentComments = commentsResult.data || commentsResult.comments || [];
-
-    renderComments();
-
 }

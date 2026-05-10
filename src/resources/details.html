@@ -1,73 +1,47 @@
 <!DOCTYPE html>
-
 <html lang="en">
-
 <head>
-
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Resource Details</title>
-
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="details.js" defer></script>
-
 </head>
+<body class="container py-4">
 
-<body>
+<header class="mb-4">
+    <h1 id="resource-title" class="display-5 fw-bold text-center">Resource Details</h1>
+    <a href="list.html" class="btn btn-primary">Back to Resources</a>
+</header>
 
-    <header>
+<main>
+    <section id="resource-info" class="mb-5">
+        <h2 class="fw-bold">Description & Notes</h2>
+        <p id="resource-description">Loading resource description...</p>
 
-        <h1 id="resource-title">Resource Details</h1>
+        <h2 class="fw-bold mt-4">Exercises & Resources</h2>
+        <a id="resource-link" href="#" target="_blank">Open Resource</a>
+    </section>
 
-        <a href="list.html">Back to Resources</a>
+    <section id="discussion-forum">
+        <h2 class="fw-bold mb-3">Discussion</h2>
 
-    </header>
+        <div id="comment-list" class="mb-3">
+            Loading comments...
+        </div>
 
-    <main>
+        <form id="comment-form" class="border p-3">
+            <fieldset>
+                <legend>Leave a Comment</legend>
 
-        <section id="resource-info">
+                <label for="new-comment" class="form-label">Your Comment</label>
+                <textarea id="new-comment" class="form-control mb-3" rows="3" required></textarea>
 
-            <p id="resource-description">Loading resource description...</p>
-
-            <a id="resource-link" href="#" target="_blank">Open Resource</a>
-
-        </section>
-
-        <section id="discussion-forum">
-
-            <h2>Discussion</h2>
-
-            <div id="comment-list">
-
-                Loading comments...
-
-            </div>
-
-            <form id="comment-form">
-
-                <fieldset>
-
-                    <legend>Add a Comment</legend>
-
-                    <label for="new-comment">Comment</label>
-
-                    <br>
-
-                    <textarea id="new-comment" required></textarea>
-
-                    <br>
-
-                    <button type="submit">Submit Comment</button>
-
-                </fieldset>
-
-            </form>
-
-        </section>
-
-    </main>
+                <button type="submit" class="btn btn-primary">Post Comment</button>
+            </fieldset>
+        </form>
+    </section>
+</main>
 
 </body>
-
 </html>
