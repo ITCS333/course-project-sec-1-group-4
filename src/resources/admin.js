@@ -82,6 +82,7 @@ function handleTableClick(event) {
 
     if (target.classList.contains("edit-btn")) {
         const id = target.dataset.id;
+
         const selected = resources.find(function (resource) {
             return String(resource.id) === String(id);
         });
@@ -101,6 +102,7 @@ async function loadAndInitialize() {
     const result = await response.json();
 
     resources = result.data || result.resources || [];
+
     renderTable(resources);
 
     if (!loadAndInitialize._listenersAttached) {

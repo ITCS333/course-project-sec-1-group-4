@@ -21,19 +21,14 @@ async function loadResources() {
         return;
     }
 
-    try {
-        const response = await fetch("./api/index.php");
-        const result = await response.json();
+    const response = await fetch("./api/index.php");
+    const result = await response.json();
 
-        const resources = result.data || result.resources || [];
+    const resources = result.data || result.resources || [];
 
-        section.innerHTML = "";
+    section.innerHTML = "";
 
-        resources.forEach(function (resource) {
-            section.appendChild(createResourceArticle(resource));
-        });
-
-    } catch (error) {
-        section.innerHTML = "";
-    }
+    resources.forEach(function (resource) {
+        section.appendChild(createResourceArticle(resource));
+    });
 }
