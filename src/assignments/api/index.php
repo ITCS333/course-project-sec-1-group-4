@@ -1,10 +1,17 @@
 <?php
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 
-// الاتصال بقاعدة البيانات
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
+// ============================================================
+// اتصال قاعدة البيانات - غير هذه القيم حسب إعداداتك
+// ============================================================
 $host = 'localhost';
 $user = 'root';
 $pass = '';
@@ -13,29 +20,25 @@ $db = 'itcs333_project';
 $conn = new mysqli($host, $user, $pass, $db);
 if ($conn->connect_error) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Database connection failed']);
+    echo json_encode(['success' => false, 'error' => 'Database connection failed: ' . $conn->connect_error]);
     exit();
 }
 
-// تحديد نوع الطلب والـ action
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? null;
 
-// GET: جلب البيانات
+// ============================================================
+// GET: استرجاع البيانات
+// ============================================================
 if ($method === 'GET') {
-    // جلب التعليقات
+    
+    // جلب التعليقات لواجب محدد
     if ($action === 'comments' && isset($_GET['assignment_id'])) {
         $assignment_id = (int)$_GET['assignment_id'];
-        $result = $conn->query("SELECT * FROM comments_assignment WHERE assignment_id = $assignment_id ORDER BY created_at ASC");
+        $result = $conn->query("SELECT id, assignment_id, author, text, created_at FROM comments_assignment WHERE assignment_id = $assignment_id ORDER BY created_at ASC");
         $comments = [];
         while ($row = $result->fetch_assoc()) {
-            $comments[] = [
-                'id' => $row['id'],
-                'assignment_id' => $row['assignment_id'],
-                'author' => $row['author'],
-                'text' => $row['text'],
-                'created_at' => $row['created_at']
-            ];
+            $comments[] = $row;
         }
         echo json_encode(['success' => true, 'data' => $comments]);
         exit();
@@ -55,7 +58,7 @@ if ($method === 'GET') {
         exit();
     }
     
-    // جلب جميع الواجبات مع بحث
+    // جلب جميع الواجبات (مع بحث اختياري)
     $sql = "SELECT * FROM assignments";
     if (isset($_GET['search']) && !empty($_GET['search'])) {
         $search = $conn->real_escape_string($_GET['search']);
@@ -73,15 +76,17 @@ if ($method === 'GET') {
     exit();
 }
 
-// POST: إنشاء
+// ============================================================
+// POST: إنشاء بيانات جديدة
+// ============================================================
 if ($method === 'POST') {
     $input = json_decode(file_get_contents('php://input'), true);
     
-    // إضافة تعليق
+    // إضافة تعليق جديد
     if ($action === 'comment') {
-        $assignment_id = (int)$input['assignment_id'];
+        $assignment_id = (int)($input['assignment_id'] ?? 0);
         $author = $conn->real_escape_string($input['author'] ?? 'Anonymous');
-        $text = $conn->real_escape_string($input['text']);
+        $text = $conn->real_escape_string($input['text'] ?? '');
         
         // التحقق من وجود الواجب
         $check = $conn->query("SELECT id FROM assignments WHERE id = $assignment_id");
@@ -125,9 +130,14 @@ if ($method === 'POST') {
         echo json_encode(['success' => false, 'error' => 'Description is required']);
         exit();
     }
-    if (empty($due_date) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $due_date)) {
+    if (empty($due_date)) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'Valid due date is required (YYYY-MM-DD)']);
+        echo json_encode(['success' => false, 'error' => 'Due date is required']);
+        exit();
+    }
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $due_date)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Invalid date format. Use YYYY-MM-DD']);
         exit();
     }
     
@@ -142,12 +152,19 @@ if ($method === 'POST') {
     exit();
 }
 
-// PUT: تحديث
+// ============================================================
+// PUT: تحديث البيانات
+// ============================================================
 if ($method === 'PUT') {
     $input = json_decode(file_get_contents('php://input'), true);
-    $id = (int)$input['id'];
+    $id = (int)($input['id'] ?? 0);
     
-    // التحقق من وجود الواجب
+    if ($id === 0) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'ID is required']);
+        exit();
+    }
+    
     $check = $conn->query("SELECT id FROM assignments WHERE id = $id");
     if ($check->num_rows === 0) {
         http_response_code(404);
@@ -156,6 +173,7 @@ if ($method === 'PUT') {
     }
     
     $updates = [];
+    
     if (isset($input['title'])) {
         $updates[] = "title = '" . $conn->real_escape_string($input['title']) . "'";
     }
@@ -190,8 +208,11 @@ if ($method === 'PUT') {
     exit();
 }
 
-// DELETE: حذف
+// ============================================================
+// DELETE: حذف البيانات
+// ============================================================
 if ($method === 'DELETE') {
+    
     // حذف تعليق
     if ($action === 'delete_comment' && isset($_GET['comment_id'])) {
         $comment_id = (int)$_GET['comment_id'];
@@ -222,28 +243,4 @@ if ($method === 'DELETE') {
             exit();
         }
         
-        // حذف التعليقات المرتبطة أولاً
-        $conn->query("DELETE FROM comments_assignment WHERE assignment_id = $id");
-        
-        $sql = "DELETE FROM assignments WHERE id = $id";
-        if ($conn->query($sql)) {
-            echo json_encode(['success' => true]);
-        } else {
-            http_response_code(500);
-            echo json_encode(['success' => false, 'error' => $conn->error]);
-        }
-        exit();
-    }
-    
-    http_response_code(400);
-    echo json_encode(['success' => false, 'error' => 'Invalid request']);
-    exit();
-}
-
-// طريقة غير مدعومة
-http_response_code(405);
-echo json_encode(['success' => false, 'error' => 'Method not allowed']);
-exit();
-
-$conn->close();
-?>
+        // حذف التعليقات المرتبطة

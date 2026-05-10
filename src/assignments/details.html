@@ -3,30 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Assignment Details</title>
+    <title>Assignment Details - Course Assignments</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; background: #f4f4f4; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; }
         header { background: #2c3e50; color: white; padding: 20px; text-align: center; }
-        main { max-width: 800px; margin: 20px auto; padding: 0 20px; }
+        header h1 { margin-bottom: 10px; }
+        nav a { color: white; text-decoration: none; margin: 0 10px; }
+        nav a:hover { text-decoration: underline; }
+        main { max-width: 900px; margin: 30px auto; padding: 0 20px; }
         .card { background: white; border-radius: 8px; padding: 25px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        h1#assignment-title { color: #2c3e50; margin-bottom: 15px; }
-        p#assignment-due-date { color: #e74c3c; font-weight: bold; margin-bottom: 20px; padding: 10px; background: #ffe8e8; border-radius: 5px; display: inline-block; }
-        p#assignment-description { color: #555; line-height: 1.6; margin-bottom: 20px; }
-        ul#assignment-files-list { list-style: none; padding: 0; margin-top: 15px; }
-        ul#assignment-files-list li { padding: 8px 0; border-bottom: 1px solid #eee; }
-        ul#assignment-files-list a { color: #3498db; text-decoration: none; }
-        ul#assignment-files-list a:hover { text-decoration: underline; }
-        section#discussion-forum { background: white; border-radius: 8px; padding: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        section#discussion-forum h2 { color: #2c3e50; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #3498db; }
-        div#comment-list { margin-bottom: 20px; max-height: 400px; overflow-y: auto; }
-        article.comment { background: #f8f9fa; padding: 12px; margin-bottom: 12px; border-radius: 6px; border-left: 3px solid #3498db; }
-        article.comment p { margin: 0 0 5px 0; color: #333; }
-        article.comment footer { font-size: 0.8em; color: #888; margin-top: 5px; }
-        form#comment-form fieldset { border: 1px solid #ddd; border-radius: 6px; padding: 15px; }
-        form#comment-form legend { padding: 0 10px; font-weight: bold; }
-        form#comment-form label { display: block; margin-bottom: 5px; font-weight: bold; }
-        textarea#new-comment { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; min-height: 100px; }
+        #assignment-title { color: #2c3e50; margin-bottom: 15px; }
+        #assignment-due-date { color: #e74c3c; font-weight: bold; margin-bottom: 20px; padding: 10px; background: #ffe8e8; border-radius: 5px; display: inline-block; }
+        #assignment-description { color: #555; line-height: 1.6; margin-bottom: 20px; }
+        #assignment-files-list { list-style: none; padding: 0; margin-top: 15px; }
+        #assignment-files-list li { padding: 8px 0; border-bottom: 1px solid #eee; }
+        #assignment-files-list a { color: #3498db; text-decoration: none; }
+        #assignment-files-list a:hover { text-decoration: underline; }
+        #discussion-forum { background: white; border-radius: 8px; padding: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        #discussion-forum h2 { color: #2c3e50; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #3498db; }
+        #comment-list { margin-bottom: 20px; max-height: 400px; overflow-y: auto; }
+        .comment { background: #f8f9fa; padding: 12px; margin-bottom: 12px; border-radius: 6px; border-left: 3px solid #3498db; }
+        .comment p { margin: 0 0 5px 0; color: #333; }
+        .comment footer { font-size: 0.8em; color: #888; margin-top: 5px; }
+        #comment-form fieldset { border: 1px solid #ddd; border-radius: 6px; padding: 15px; }
+        #comment-form legend { padding: 0 10px; font-weight: bold; }
+        #comment-form label { display: block; margin-bottom: 5px; font-weight: bold; }
+        #new-comment { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; min-height: 100px; resize: vertical; }
+        #new-comment:focus { outline: none; border-color: #3498db; }
         button[type="submit"] { background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-top: 10px; }
         button[type="submit"]:hover { background: #2980b9; }
         .back-link { display: inline-block; margin-bottom: 20px; color: #3498db; text-decoration: none; }
@@ -36,15 +40,20 @@
 <body>
     <header>
         <h1>📖 Assignment Details</h1>
-        <nav><a href="list.html">← Back to Assignments</a></nav>
+        <nav>
+            <a href="list.html">All Assignments</a>
+            <a href="../index.html">Home</a>
+        </nav>
     </header>
     <main>
-        <a href="list.html" class="back-link">← All Assignments</a>
+        <a href="list.html" class="back-link">← Back to Assignments</a>
         <div class="card">
             <h1 id="assignment-title">Loading...</h1>
             <p id="assignment-due-date"></p>
             <p id="assignment-description">Loading description...</p>
-            <ul id="assignment-files-list"></ul>
+            <ul id="assignment-files-list">
+                <li>Loading files...</li>
+            </ul>
         </div>
         <section id="discussion-forum">
             <h2>💬 Questions &amp; Discussion</h2>

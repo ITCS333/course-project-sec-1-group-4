@@ -6,24 +6,28 @@
     <title>Admin - Manage Assignments</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; background: #f4f4f4; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; }
         header { background: #2c3e50; color: white; padding: 20px; text-align: center; }
-        main { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
-        section { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        h2 { color: #2c3e50; margin-bottom: 20px; }
-        form#assignment-form fieldset { border: 1px solid #ddd; border-radius: 6px; padding: 20px; }
-        form#assignment-form legend { padding: 0 10px; font-weight: bold; font-size: 1.1em; }
-        form#assignment-form label { display: block; margin-top: 15px; margin-bottom: 5px; font-weight: bold; }
-        form#assignment-form input, form#assignment-form textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; }
-        form#assignment-form textarea { min-height: 100px; }
-        button#add-assignment { background: #27ae60; color: white; border: none; padding: 12px 25px; border-radius: 4px; cursor: pointer; margin-top: 20px; font-size: 1em; }
-        button#add-assignment:hover { background: #219a52; }
-        table#assignments-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        table#assignments-table th, table#assignments-table td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-        table#assignments-table th { background: #34495e; color: white; }
-        table#assignments-table tr:hover { background: #f5f5f5; }
-        .edit-btn { background: #3498db; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin-right: 5px; }
-        .delete-btn { background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; }
+        header h1 { margin-bottom: 10px; }
+        nav a { color: white; text-decoration: none; margin: 0 10px; }
+        nav a:hover { text-decoration: underline; }
+        main { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+        section { background: white; border-radius: 8px; padding: 25px; margin-bottom: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        h2 { color: #2c3e50; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #3498db; }
+        #assignment-form fieldset { border: 1px solid #ddd; border-radius: 6px; padding: 20px; }
+        #assignment-form legend { padding: 0 10px; font-weight: bold; font-size: 1.1em; color: #2c3e50; }
+        #assignment-form label { display: block; margin-top: 15px; margin-bottom: 5px; font-weight: bold; color: #555; }
+        #assignment-form input, #assignment-form textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; font-size: 14px; }
+        #assignment-form input:focus, #assignment-form textarea:focus { outline: none; border-color: #3498db; }
+        #assignment-form textarea { min-height: 100px; resize: vertical; }
+        #add-assignment { background: #27ae60; color: white; border: none; padding: 12px 25px; border-radius: 4px; cursor: pointer; margin-top: 20px; font-size: 1em; }
+        #add-assignment:hover { background: #219a52; }
+        #assignments-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        #assignments-table th, #assignments-table td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        #assignments-table th { background: #34495e; color: white; font-weight: bold; }
+        #assignments-table tr:hover { background: #f5f5f5; }
+        .edit-btn { background: #3498db; color: white; border: none; padding: 5px 12px; border-radius: 3px; cursor: pointer; margin-right: 5px; }
+        .delete-btn { background: #e74c3c; color: white; border: none; padding: 5px 12px; border-radius: 3px; cursor: pointer; }
         .edit-btn:hover { background: #2980b9; }
         .delete-btn:hover { background: #c0392b; }
     </style>
@@ -43,13 +47,13 @@
                 <fieldset>
                     <legend>Assignment Details</legend>
                     
-                    <label for="assignment-title">Title</label>
+                    <label for="assignment-title">Assignment Title *</label>
                     <input type="text" id="assignment-title" required>
                     
-                    <label for="assignment-description">Description</label>
+                    <label for="assignment-description">Description *</label>
                     <textarea id="assignment-description" required></textarea>
                     
-                    <label for="assignment-due-date">Due Date</label>
+                    <label for="assignment-due-date">Due Date *</label>
                     <input type="date" id="assignment-due-date" required>
                     
                     <label for="assignment-files">Files (one URL per line)</label>
@@ -72,7 +76,7 @@
                     </tr>
                 </thead>
                 <tbody id="assignments-tbody">
-                    <tr><td colspan="4">Loading...</td></tr>
+                    <tr><td colspan="4" style="text-align: center;">Loading assignments...</td></tr>
                 </tbody>
             </table>
         </section>

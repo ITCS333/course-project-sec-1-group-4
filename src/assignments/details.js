@@ -1,13 +1,12 @@
 const API_URL = './api/index.php';
 let currentAssignmentId = null;
+let currentComments = [];
 
-// جلب ID من URL
 function getAssignmentIdFromURL() {
     const params = new URLSearchParams(window.location.search);
     return params.get('id');
 }
 
-// عرض تفاصيل الواجب
 function renderAssignmentDetails(assignment) {
     document.getElementById('assignment-title').textContent = assignment.title;
     document.getElementById('assignment-due-date').textContent = `Due: ${assignment.due_date}`;
@@ -22,16 +21,15 @@ function renderAssignmentDetails(assignment) {
             const a = document.createElement('a');
             a.href = file;
             a.target = '_blank';
-            a.textContent = file.split('/').pop() || 'Download';
+            a.textContent = file.split('/').pop() || 'Download File';
             li.appendChild(a);
             filesList.appendChild(li);
         });
     } else {
-        filesList.innerHTML = '<li>No files attached.</li>';
+        filesList.innerHTML = '<li>No files attached to this assignment.</li>';
     }
 }
 
-// إنشاء عنصر تعليق
 function createCommentArticle(comment) {
     const article = document.createElement('article');
     article.className = 'comment';
@@ -42,23 +40,20 @@ function createCommentArticle(comment) {
     return article;
 }
 
-// عرض التعليقات
 function renderComments() {
     const container = document.getElementById('comment-list');
-    if (!window.currentComments) return;
-    
     container.innerHTML = '';
-    if (window.currentComments.length === 0) {
-        container.innerHTML = '<p>No comments yet. Be the first to comment!</p>';
+    
+    if (!currentComments || currentComments.length === 0) {
+        container.innerHTML = '<p style="color: #999; text-align: center;">No comments yet. Be the first to comment!</p>';
         return;
     }
     
-    window.currentComments.forEach(comment => {
+    currentComments.forEach(comment => {
         container.appendChild(createCommentArticle(comment));
     });
 }
 
-// إضافة تعليق جديد
 async function handleAddComment(event) {
     event.preventDefault();
     
@@ -72,7 +67,7 @@ async function handleAddComment(event) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                assignment_id: currentAssignmentId,
+                assignment_id: parseInt(currentAssignmentId),
                 author: 'Student User',
                 text: text
             })
@@ -83,6 +78,8 @@ async function handleAddComment(event) {
         if (result.success) {
             textarea.value = '';
             await loadComments();
+        } else {
+            alert('Failed to add comment: ' + (result.error || 'Unknown error'));
         }
     } catch (error) {
         console.error('Error adding comment:', error);
@@ -90,7 +87,6 @@ async function handleAddComment(event) {
     }
 }
 
-// تحميل التعليقات
 async function loadComments() {
     if (!currentAssignmentId) return;
     
@@ -99,16 +95,15 @@ async function loadComments() {
         const result = await response.json();
         
         if (result.success) {
-            window.currentComments = result.data;
+            currentComments = result.data || [];
             renderComments();
         }
     } catch (error) {
         console.error('Error loading comments:', error);
-        document.getElementById('comment-list').innerHTML = '<p>Error loading comments.</p>';
+        document.getElementById('comment-list').innerHTML = '<p style="color: red;">Error loading comments.</p>';
     }
 }
 
-// تحميل تفاصيل الواجب
 async function loadAssignment() {
     const id = getAssignmentIdFromURL();
     if (!id) {
@@ -126,14 +121,15 @@ async function loadAssignment() {
             renderAssignmentDetails(result.data);
         } else {
             document.getElementById('assignment-title').textContent = 'Assignment not found';
+            document.getElementById('assignment-description').textContent = 'The requested assignment could not be found.';
         }
     } catch (error) {
         console.error('Error loading assignment:', error);
         document.getElementById('assignment-title').textContent = 'Error loading assignment';
+        document.getElementById('assignment-description').textContent = 'There was an error loading this assignment. Please try again.';
     }
 }
 
-// تهيئة الصفحة
 async function initializePage() {
     await loadAssignment();
     await loadComments();
@@ -150,5 +146,4 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// بدء التشغيل
 document.addEventListener('DOMContentLoaded', initializePage);

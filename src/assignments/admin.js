@@ -1,7 +1,6 @@
 const API_URL = './api/index.php';
 let assignments = [];
 
-// إنشاء صف جدول
 function createAssignmentRow(assignment) {
     const row = document.createElement('tr');
     row.innerHTML = `
@@ -16,13 +15,12 @@ function createAssignmentRow(assignment) {
     return row;
 }
 
-// عرض الجدول
 function renderTable() {
     const tbody = document.getElementById('assignments-tbody');
     tbody.innerHTML = '';
     
-    if (assignments.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4">No assignments found.</td></tr>';
+    if (!assignments || assignments.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No assignments found.</td></tr>';
         return;
     }
     
@@ -31,7 +29,6 @@ function renderTable() {
     });
 }
 
-// إضافة واجب جديد
 async function handleAddAssignment(event) {
     event.preventDefault();
     
@@ -41,7 +38,7 @@ async function handleAddAssignment(event) {
     const filesText = document.getElementById('assignment-files').value.trim();
     
     if (!title || !description || !due_date) {
-        alert('Please fill in all required fields.');
+        alert('Please fill in all required fields (Title, Description, Due Date).');
         return;
     }
     
@@ -61,20 +58,17 @@ async function handleAddAssignment(event) {
             document.getElementById('assignment-form').reset();
             await loadAndInitialize();
         } else {
-            alert('Failed to add assignment.');
+            alert('Failed to add assignment: ' + (result.error || 'Unknown error'));
         }
     } catch (error) {
-        console.error('Error adding assignment:', error);
-        alert('Error adding assignment.');
+        console.error('Error:', error);
+        alert('Error adding assignment. Please try again.');
     }
 }
 
-// حذف واجب
 async function deleteAssignment(id) {
     try {
-        const response = await fetch(`${API_URL}?id=${id}`, {
-            method: 'DELETE'
-        });
+        const response = await fetch(`${API_URL}?id=${id}`, { method: 'DELETE' });
         const result = await response.json();
         
         if (result.success) {
@@ -84,32 +78,27 @@ async function deleteAssignment(id) {
             alert('Failed to delete assignment.');
         }
     } catch (error) {
-        console.error('Error deleting assignment:', error);
+        console.error('Error:', error);
         alert('Error deleting assignment.');
     }
 }
 
-// تعديل واجب - تعبئة النموذج
-function editAssignment(assignment) {
+function populateFormForEdit(assignment) {
     document.getElementById('assignment-title').value = assignment.title;
     document.getElementById('assignment-description').value = assignment.description;
     document.getElementById('assignment-due-date').value = assignment.due_date;
     document.getElementById('assignment-files').value = assignment.files ? assignment.files.join('\n') : '';
     
-    // تغيير زر الإضافة إلى تحديث
     const submitBtn = document.getElementById('add-assignment');
     submitBtn.textContent = 'Update Assignment';
     
-    // إزالة المستمع القديم وإضافة مستمع للتحديث
     const form = document.getElementById('assignment-form');
-    const oldSubmit = form.onsubmit;
     form.onsubmit = async (e) => {
         e.preventDefault();
         await updateAssignment(assignment.id);
     };
 }
 
-// تحديث واجب
 async function updateAssignment(id) {
     const title = document.getElementById('assignment-title').value.trim();
     const description = document.getElementById('assignment-description').value.trim();
@@ -137,12 +126,11 @@ async function updateAssignment(id) {
             alert('Failed to update assignment.');
         }
     } catch (error) {
-        console.error('Error updating assignment:', error);
+        console.error('Error:', error);
         alert('Error updating assignment.');
     }
 }
 
-// معالج النقر على الجدول
 function handleTableClick(event) {
     const target = event.target;
     
@@ -155,12 +143,11 @@ function handleTableClick(event) {
         const id = parseInt(target.dataset.id);
         const assignment = assignments.find(a => a.id === id);
         if (assignment) {
-            editAssignment(assignment);
+            populateFormForEdit(assignment);
         }
     }
 }
 
-// تحميل البيانات وتهيئة الصفحة
 async function loadAndInitialize() {
     try {
         const response = await fetch(API_URL);
@@ -169,10 +156,13 @@ async function loadAndInitialize() {
         if (result.success && result.data) {
             assignments = result.data;
             renderTable();
+        } else {
+            assignments = [];
+            renderTable();
         }
     } catch (error) {
-        console.error('Error loading assignments:', error);
-        document.getElementById('assignments-tbody').innerHTML = '<tr><td colspan="4">Error loading data.</td></tr>';
+        console.error('Error:', error);
+        document.getElementById('assignments-tbody').innerHTML = '<tr><td colspan="4" style="text-align: center; color: red;">Error loading data.</td></tr>';
     }
 }
 
@@ -182,7 +172,6 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// تهيئة الصفحة
 document.addEventListener('DOMContentLoaded', async () => {
     await loadAndInitialize();
     
