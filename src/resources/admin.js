@@ -20,9 +20,9 @@ function createResourceRow(resource) {
 
         <td>
 
-            <button type="button" class="btn btn-warning btn-sm edit-btn" data-id="${resource.id}">Edit</button>
+            <button type="button" class="edit-btn" data-id="${resource.id}">Edit</button>
 
-            <button type="button" class="btn btn-danger btn-sm delete-btn" data-id="${resource.id}">Delete</button>
+            <button type="button" class="delete-btn" data-id="${resource.id}">Delete</button>
 
         </td>
 
