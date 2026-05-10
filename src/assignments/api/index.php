@@ -1,246 +1,273 @@
 <?php
+
+declare(strict_types=1);
+
 header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
+// ─── Simple SQLite-backed storage ───────────────────────────────────────────
+$dbPath = __DIR__ . '/assignments.sqlite';
+$db     = new SQLite3($dbPath);
+$db->enableExceptions(true);
+
+// Create tables
+$db->exec('
+  CREATE TABLE IF NOT EXISTS assignments (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    title       TEXT    NOT NULL,
+    description TEXT    NOT NULL,
+    due_date    TEXT    NOT NULL,
+    files       TEXT    NOT NULL DEFAULT "[]",
+    created_at  TEXT    NOT NULL DEFAULT (datetime("now"))
+  );
+  CREATE TABLE IF NOT EXISTS comments (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    assignment_id INTEGER NOT NULL,
+    author        TEXT    NOT NULL DEFAULT "Student",
+    text          TEXT    NOT NULL,
+    created_at    TEXT    NOT NULL DEFAULT (datetime("now")),
+    FOREIGN KEY (assignment_id) REFERENCES assignments(id)
+  );
+');
+
+// Seed data if empty
+$count = $db->querySingle('SELECT COUNT(*) FROM assignments');
+if ($count === 0) {
+    $seed = [
+        [
+            'title'       => 'HTML & CSS Portfolio',
+            'description' => 'Build a personal portfolio using HTML and CSS.',
+            'due_date'    => '2025-02-15',
+            'files'       => json_encode(['https://example.com/brief.pdf']),
+        ],
+        [
+            'title'       => 'JavaScript Interactivity',
+            'description' => 'Add interactivity to your portfolio using JavaScript.',
+            'due_date'    => '2025-03-01',
+            'files'       => json_encode([]),
+        ],
+    ];
+    $stmt = $db->prepare('
+        INSERT INTO assignments (title, description, due_date, files)
+        VALUES (:title, :description, :due_date, :files)
+    ');
+    foreach ($seed as $s) {
+        $stmt->bindValue(':title',       $s['title']);
+        $stmt->bindValue(':description', $s['description']);
+        $stmt->bindValue(':due_date',    $s['due_date']);
+        $stmt->bindValue(':files',       $s['files']);
+        $stmt->execute();
+        $stmt->reset();
+    }
 }
 
-// ============================================================
-// اتصال قاعدة البيانات - غير هذه القيم حسب إعداداتك
-// ============================================================
-$host = 'localhost';
-$user = 'root';
-$pass = '';
-$db = 'itcs333_project';
-
-$conn = new mysqli($host, $user, $pass, $db);
-if ($conn->connect_error) {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Database connection failed: ' . $conn->connect_error]);
-    exit();
+// ─── Helpers ────────────────────────────────────────────────────────────────
+function respond(int $status, array $payload): never
+{
+    http_response_code($status);
+    echo json_encode($payload);
+    exit;
 }
 
+function validateDate(string $date): bool
+{
+    $d = DateTime::createFromFormat('Y-m-d', $date);
+    return $d && $d->format('Y-m-d') === $date;
+}
+
+function rowToAssignment(array $row): array
+{
+    $row['files'] = json_decode($row['files'], true) ?? [];
+    return $row;
+}
+
+// ─── Route ──────────────────────────────────────────────────────────────────
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? null;
+$input  = json_decode(file_get_contents('php://input'), true) ?? [];
 
-// ============================================================
-// GET: استرجاع البيانات
-// ============================================================
+// ── GET ─────────────────────────────────────────────────────────────────────
 if ($method === 'GET') {
-    
-    // جلب التعليقات لواجب محدد
-    if ($action === 'comments' && isset($_GET['assignment_id'])) {
-        $assignment_id = (int)$_GET['assignment_id'];
-        $result = $conn->query("SELECT id, assignment_id, author, text, created_at FROM comments_assignment WHERE assignment_id = $assignment_id ORDER BY created_at ASC");
-        $comments = [];
-        while ($row = $result->fetch_assoc()) {
-            $comments[] = $row;
+
+    // GET ?action=comments&assignment_id=X
+    if ($action === 'comments') {
+        $assignmentId = (int)($_GET['assignment_id'] ?? 0);
+        $stmt = $db->prepare('SELECT * FROM comments WHERE assignment_id = :aid ORDER BY id');
+        $stmt->bindValue(':aid', $assignmentId, SQLITE3_INTEGER);
+        $res  = $stmt->execute();
+        $rows = [];
+        while ($r = $res->fetchArray(SQLITE3_ASSOC)) {
+            $rows[] = $r;
         }
-        echo json_encode(['success' => true, 'data' => $comments]);
-        exit();
+        respond(200, ['success' => true, 'data' => $rows]);
     }
-    
-    // جلب واجب واحد
+
+    // GET ?id=X
     if (isset($_GET['id'])) {
-        $id = (int)$_GET['id'];
-        $result = $conn->query("SELECT * FROM assignments WHERE id = $id");
-        if ($result && $row = $result->fetch_assoc()) {
-            $row['files'] = json_decode($row['files'] ?? '[]', true);
-            echo json_encode(['success' => true, 'data' => $row]);
-        } else {
-            http_response_code(404);
-            echo json_encode(['success' => false, 'error' => 'Assignment not found']);
+        $id   = (int)$_GET['id'];
+        $stmt = $db->prepare('SELECT * FROM assignments WHERE id = :id');
+        $stmt->bindValue(':id', $id, SQLITE3_INTEGER);
+        $res  = $stmt->execute();
+        $row  = $res->fetchArray(SQLITE3_ASSOC);
+        if (!$row) {
+            respond(404, ['success' => false, 'error' => 'Not found']);
         }
-        exit();
+        respond(200, ['success' => true, 'data' => rowToAssignment($row)]);
     }
-    
-    // جلب جميع الواجبات (مع بحث اختياري)
-    $sql = "SELECT * FROM assignments";
-    if (isset($_GET['search']) && !empty($_GET['search'])) {
-        $search = $conn->real_escape_string($_GET['search']);
-        $sql .= " WHERE title LIKE '%$search%' OR description LIKE '%$search%'";
+
+    // GET ?search=X
+    if (isset($_GET['search'])) {
+        $q    = '%' . $_GET['search'] . '%';
+        $stmt = $db->prepare('
+            SELECT * FROM assignments
+            WHERE title LIKE :q OR description LIKE :q
+            ORDER BY id
+        ');
+        $stmt->bindValue(':q', $q);
+        $res  = $stmt->execute();
+        $rows = [];
+        while ($r = $res->fetchArray(SQLITE3_ASSOC)) {
+            $rows[] = rowToAssignment($r);
+        }
+        respond(200, ['success' => true, 'data' => $rows]);
     }
-    $sql .= " ORDER BY due_date ASC";
-    
-    $result = $conn->query($sql);
-    $assignments = [];
-    while ($row = $result->fetch_assoc()) {
-        $row['files'] = json_decode($row['files'] ?? '[]', true);
-        $assignments[] = $row;
+
+    // GET all
+    $res  = $db->query('SELECT * FROM assignments ORDER BY id');
+    $rows = [];
+    while ($r = $res->fetchArray(SQLITE3_ASSOC)) {
+        $rows[] = rowToAssignment($r);
     }
-    echo json_encode(['success' => true, 'data' => $assignments]);
-    exit();
+    respond(200, ['success' => true, 'data' => $rows]);
 }
 
-// ============================================================
-// POST: إنشاء بيانات جديدة
-// ============================================================
+// ── POST ─────────────────────────────────────────────────────────────────────
 if ($method === 'POST') {
-    $input = json_decode(file_get_contents('php://input'), true);
-    
-    // إضافة تعليق جديد
+
+    // POST ?action=comment
     if ($action === 'comment') {
-        $assignment_id = (int)($input['assignment_id'] ?? 0);
-        $author = $conn->real_escape_string($input['author'] ?? 'Anonymous');
-        $text = $conn->real_escape_string($input['text'] ?? '');
-        
-        // التحقق من وجود الواجب
-        $check = $conn->query("SELECT id FROM assignments WHERE id = $assignment_id");
-        if ($check->num_rows === 0) {
-            http_response_code(404);
-            echo json_encode(['success' => false, 'error' => 'Assignment not found']);
-            exit();
-        }
-        
+        $assignmentId = (int)($input['assignment_id'] ?? 0);
+        $author       = trim($input['author'] ?? 'Student');
+        $text         = trim($input['text'] ?? '');
+
         if (empty($text)) {
-            http_response_code(400);
-            echo json_encode(['success' => false, 'error' => 'Comment text is required']);
-            exit();
+            respond(400, ['success' => false, 'error' => 'text is required']);
         }
-        
-        $sql = "INSERT INTO comments_assignment (assignment_id, author, text) VALUES ($assignment_id, '$author', '$text')";
-        if ($conn->query($sql)) {
-            http_response_code(201);
-            echo json_encode(['success' => true, 'id' => $conn->insert_id]);
-        } else {
-            http_response_code(500);
-            echo json_encode(['success' => false, 'error' => $conn->error]);
+
+        // Check assignment exists
+        $stmt = $db->prepare('SELECT id FROM assignments WHERE id = :id');
+        $stmt->bindValue(':id', $assignmentId, SQLITE3_INTEGER);
+        $res  = $stmt->execute();
+        if (!$res->fetchArray()) {
+            respond(404, ['success' => false, 'error' => 'Assignment not found']);
         }
-        exit();
+
+        $stmt = $db->prepare('
+            INSERT INTO comments (assignment_id, author, text)
+            VALUES (:aid, :author, :text)
+        ');
+        $stmt->bindValue(':aid',    $assignmentId, SQLITE3_INTEGER);
+        $stmt->bindValue(':author', $author);
+        $stmt->bindValue(':text',   $text);
+        $stmt->execute();
+        $newId = $db->lastInsertRowID();
+
+        $stmt = $db->prepare('SELECT * FROM comments WHERE id = :id');
+        $stmt->bindValue(':id', $newId, SQLITE3_INTEGER);
+        $row  = $stmt->execute()->fetchArray(SQLITE3_ASSOC);
+
+        respond(201, ['success' => true, 'id' => $newId, 'data' => $row]);
     }
-    
-    // إضافة واجب جديد
-    $title = $conn->real_escape_string($input['title'] ?? '');
-    $description = $conn->real_escape_string($input['description'] ?? '');
-    $due_date = $conn->real_escape_string($input['due_date'] ?? '');
-    $files = json_encode($input['files'] ?? []);
-    
-    // التحقق من الحقول المطلوبة
-    if (empty($title)) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'Title is required']);
-        exit();
-    }
-    if (empty($description)) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'Description is required']);
-        exit();
-    }
-    if (empty($due_date)) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'Due date is required']);
-        exit();
-    }
-    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $due_date)) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'Invalid date format. Use YYYY-MM-DD']);
-        exit();
-    }
-    
-    $sql = "INSERT INTO assignments (title, description, due_date, files) VALUES ('$title', '$description', '$due_date', '$files')";
-    if ($conn->query($sql)) {
-        http_response_code(201);
-        echo json_encode(['success' => true, 'id' => $conn->insert_id]);
-    } else {
-        http_response_code(500);
-        echo json_encode(['success' => false, 'error' => $conn->error]);
-    }
-    exit();
+
+    // POST create assignment
+    $title       = trim($input['title']       ?? '');
+    $description = trim($input['description'] ?? '');
+    $due_date    = trim($input['due_date']    ?? '');
+    $files       = $input['files'] ?? [];
+
+    if (empty($title))       respond(400, ['success' => false, 'error' => 'title is required']);
+    if (empty($description)) respond(400, ['success' => false, 'error' => 'description is required']);
+    if (empty($due_date))    respond(400, ['success' => false, 'error' => 'due_date is required']);
+    if (!validateDate($due_date)) respond(400, ['success' => false, 'error' => 'Invalid date format']);
+
+    $stmt = $db->prepare('
+        INSERT INTO assignments (title, description, due_date, files)
+        VALUES (:title, :desc, :due, :files)
+    ');
+    $stmt->bindValue(':title', $title);
+    $stmt->bindValue(':desc',  $description);
+    $stmt->bindValue(':due',   $due_date);
+    $stmt->bindValue(':files', json_encode(array_values((array)$files)));
+    $stmt->execute();
+    $newId = $db->lastInsertRowID();
+
+    respond(201, ['success' => true, 'id' => $newId]);
 }
 
-// ============================================================
-// PUT: تحديث البيانات
-// ============================================================
+// ── PUT ──────────────────────────────────────────────────────────────────────
 if ($method === 'PUT') {
-    $input = json_decode(file_get_contents('php://input'), true);
     $id = (int)($input['id'] ?? 0);
-    
-    if ($id === 0) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'ID is required']);
-        exit();
+    if (!$id) respond(400, ['success' => false, 'error' => 'id is required']);
+
+    // Check exists
+    $stmt = $db->prepare('SELECT * FROM assignments WHERE id = :id');
+    $stmt->bindValue(':id', $id, SQLITE3_INTEGER);
+    $row  = $stmt->execute()->fetchArray(SQLITE3_ASSOC);
+    if (!$row) respond(404, ['success' => false, 'error' => 'Not found']);
+
+    if (isset($input['due_date']) && !validateDate($input['due_date'])) {
+        respond(400, ['success' => false, 'error' => 'Invalid date format']);
     }
-    
-    $check = $conn->query("SELECT id FROM assignments WHERE id = $id");
-    if ($check->num_rows === 0) {
-        http_response_code(404);
-        echo json_encode(['success' => false, 'error' => 'Assignment not found']);
-        exit();
-    }
-    
-    $updates = [];
-    
-    if (isset($input['title'])) {
-        $updates[] = "title = '" . $conn->real_escape_string($input['title']) . "'";
-    }
-    if (isset($input['description'])) {
-        $updates[] = "description = '" . $conn->real_escape_string($input['description']) . "'";
-    }
-    if (isset($input['due_date'])) {
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $input['due_date'])) {
-            http_response_code(400);
-            echo json_encode(['success' => false, 'error' => 'Invalid date format']);
-            exit();
-        }
-        $updates[] = "due_date = '" . $conn->real_escape_string($input['due_date']) . "'";
-    }
-    if (isset($input['files'])) {
-        $updates[] = "files = '" . json_encode($input['files']) . "'";
-    }
-    
-    if (empty($updates)) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'No fields to update']);
-        exit();
-    }
-    
-    $sql = "UPDATE assignments SET " . implode(', ', $updates) . " WHERE id = $id";
-    if ($conn->query($sql)) {
-        echo json_encode(['success' => true]);
-    } else {
-        http_response_code(500);
-        echo json_encode(['success' => false, 'error' => $conn->error]);
-    }
-    exit();
+
+    $title       = $input['title']       ?? $row['title'];
+    $description = $input['description'] ?? $row['description'];
+    $due_date    = $input['due_date']    ?? $row['due_date'];
+    $files       = isset($input['files']) ? json_encode(array_values((array)$input['files'])) : $row['files'];
+
+    $stmt = $db->prepare('
+        UPDATE assignments
+        SET title = :title, description = :desc, due_date = :due, files = :files
+        WHERE id = :id
+    ');
+    $stmt->bindValue(':title', $title);
+    $stmt->bindValue(':desc',  $description);
+    $stmt->bindValue(':due',   $due_date);
+    $stmt->bindValue(':files', $files);
+    $stmt->bindValue(':id',    $id, SQLITE3_INTEGER);
+    $stmt->execute();
+
+    respond(200, ['success' => true]);
 }
 
-// ============================================================
-// DELETE: حذف البيانات
-// ============================================================
+// ── DELETE ───────────────────────────────────────────────────────────────────
 if ($method === 'DELETE') {
-    
-    // حذف تعليق
-    if ($action === 'delete_comment' && isset($_GET['comment_id'])) {
-        $comment_id = (int)$_GET['comment_id'];
-        $check = $conn->query("SELECT id FROM comments_assignment WHERE id = $comment_id");
-        if ($check->num_rows === 0) {
-            http_response_code(404);
-            echo json_encode(['success' => false, 'error' => 'Comment not found']);
-            exit();
+
+    // DELETE ?action=delete_comment&comment_id=X
+    if ($action === 'delete_comment') {
+        $commentId = (int)($_GET['comment_id'] ?? 0);
+        $stmt = $db->prepare('SELECT id FROM comments WHERE id = :id');
+        $stmt->bindValue(':id', $commentId, SQLITE3_INTEGER);
+        if (!$stmt->execute()->fetchArray()) {
+            respond(404, ['success' => false, 'error' => 'Comment not found']);
         }
-        
-        $sql = "DELETE FROM comments_assignment WHERE id = $comment_id";
-        if ($conn->query($sql)) {
-            echo json_encode(['success' => true]);
-        } else {
-            http_response_code(500);
-            echo json_encode(['success' => false, 'error' => $conn->error]);
-        }
-        exit();
+        $stmt = $db->prepare('DELETE FROM comments WHERE id = :id');
+        $stmt->bindValue(':id', $commentId, SQLITE3_INTEGER);
+        $stmt->execute();
+        respond(200, ['success' => true]);
     }
-    
-    // حذف واجب
-    if (isset($_GET['id'])) {
-        $id = (int)$_GET['id'];
-        $check = $conn->query("SELECT id FROM assignments WHERE id = $id");
-        if ($check->num_rows === 0) {
-            http_response_code(404);
-            echo json_encode(['success' => false, 'error' => 'Assignment not found']);
-            exit();
-        }
-        
-        // حذف التعليقات المرتبطة
+
+    // DELETE ?id=X
+    $id = (int)($_GET['id'] ?? 0);
+    $stmt = $db->prepare('SELECT id FROM assignments WHERE id = :id');
+    $stmt->bindValue(':id', $id, SQLITE3_INTEGER);
+    if (!$stmt->execute()->fetchArray()) {
+        respond(404, ['success' => false, 'error' => 'Not found']);
+    }
+    $db->prepare('DELETE FROM comments    WHERE assignment_id = :id')->execute() ;
+    $stmt = $db->prepare('DELETE FROM assignments WHERE id = :id');
+    $stmt->bindValue(':id', $id, SQLITE3_INTEGER);
+    $stmt->execute();
+    respond(200, ['success' => true]);
+}
+
+// ── Unsupported method ───────────────────────────────────────────────────────
+respond(405, ['success' => false, 'error' => 'Method not allowed']);
