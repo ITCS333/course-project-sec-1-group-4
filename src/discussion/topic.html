@@ -5,51 +5,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Topic Details</title>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
-     rel="stylesheet" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
     <link rel="stylesheet" href="../common/styles.css">
 
     <script src="topic.js" defer></script>
 </head>
 <body class="bg-light">
 
-    <header class="bg-white border-bottom py-3 mb-4">
+    <header class="navbar navbar-dark bg-primary mb-4 shadow-sm">
         <div class="container d-flex justify-content-between align-items-center">
-        <h1 id="topic-subject" class="h3 mb-0 text-primary"></h1>
-            <a href="board.html" class="btn btn-outline-secondary btn-sm">← Back to Discussion Board</a>
+            <h1 id="topic-subject" class="navbar-brand mb-0 h4 fs-3">Loading Topic...</h1>
+            <a href="board.html" class="btn btn-light btn-sm text-primary font-weight-bold">← Back to Board</a>
         </div>
     </header>
 
     <main class="container">
-        <article id="original-post" class="card shadow-sm mb-5 border-primary">
-            <div class="card-body">
-            <p id="op-message" class="card-text fs-5"></p>
-            <footer id="op-footer" class="blockquote-footer mt-3"></footer>
-            <div id="op-actions" class="mt-3 d-flex gap-2">
-                </div>
+        <article id="original-post" class="card shadow-sm mb-4 border-0">
+            <div class="card-body p-4">
+                <p id="op-message" class="card-text fs-5 text-dark" style="white-space: pre-wrap;"></p>
+                <footer id="op-footer" class="text-muted small border-top pt-2 mt-3"></footer>
+                <div id="op-actions" class="mt-3"></div>
             </div>
         </article>
 
         <section id="replies-section">
-            <h2 class="h4 mb-4 text-secondary border-bottom pb-2">Replies</h2>
-            <div id="reply-list-container" class="mb-5">
-            </div>
-            <hr>
-             
-            <div class="card shadow-sm border-0">
-                <div class="card-body bg-white rounded">
-            <form id="reply-form" action="#">
-                <fieldset>
-                    <legend class="h5 mb-3">Your Reply</legend>
-                   <div class="mb-3">
-                    <label for="new-reply" class="visually-hidden">Message:</label>
-                    <textarea id="new-reply" class="form-control" rows="5" required placeholder="Type your reply here..."></textarea>
-                </div>
+            <h2 class="h5 mb-3 text-secondary border-bottom pb-2">Replies</h2>
+            
+            <div id="reply-list-container" class="mb-4"></div>
 
-                    <button type="submit" class="btn btn-success px-5">Post Reply</button>
-                </fieldset>
-            </form>
-            </div>
+            <div class="card shadow-sm border-0 mb-5">
+                <div class="card-body p-4 bg-white rounded">
+                    <form id="reply-form" action="#">
+                        <fieldset>
+                            <legend class="h6 mb-3 text-dark font-weight-bold">Leave a Reply</legend>
+                            <div class="mb-3">
+                                <textarea id="new-reply" class="form-control" rows="4" placeholder="Type your reply here..." required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary px-4">Post Reply</button>
+                        </fieldset>
+                    </form>
+                </div>
             </div>
         </section>
     </main>
